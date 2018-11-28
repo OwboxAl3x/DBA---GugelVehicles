@@ -14,8 +14,28 @@ import es.upv.dsic.gti_ia.core.AgentID;
  */
 public class Coches extends SuperAgent {
     
+    
     public Coches(AgentID aid) throws Exception {
         super(aid);
     }
+    
+    /**
+    *
+    * @author Adrian Martin Jaimez
+    */
+    @Override
+    public void init(){
+        
+    }
+    
+    /**
+    *
+    * @author Adrian Martin Jaimez
+    */
+    @Override
+    public void execute(){
+        
+    }
+    
     
 }
