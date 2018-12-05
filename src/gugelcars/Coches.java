@@ -14,6 +14,7 @@ import es.upv.dsic.gti_ia.core.AgentID;
 /**
  *
  * @author Adrian Martin Jaimez
+ * @author Manuel Ros Rodríguez
  */
 public class Coches extends SuperAgent {
     
@@ -27,6 +28,8 @@ public class Coches extends SuperAgent {
     private MessageQueue mensajesServidor;
     private String conversationID;
     private String replyWith;
+    private int tamanoMapa;
+    private int cuadrante;
     
     public Coches(AgentID aid, String nombreCoordinador, String nombreCoche1, String nombreCoche2, String nombreCoche3, String nombreCoche4) throws Exception {
         super(aid);
@@ -40,6 +43,8 @@ public class Coches extends SuperAgent {
         mensajesServidor = new MessageQueue(30); // OJO, solo caben 30 mensajes
         conversationID = "";
         replyWith = "";
+        tamanoMapa = 0;
+        cuadrante = 0;
     }
     
     /**
@@ -83,29 +88,52 @@ public class Coches extends SuperAgent {
     }
     
     public void login() throws InterruptedException{
-        while (mensajesCoordinador.isEmpty()){}
-        ACLMessage inboxLogin = mensajesCoordinador.Pop();
+        boolean salirSubscribe = false;
+        ACLMessage inbox = null;
         
-        JsonObject json= new JsonObject();
-        conversationID = Json.parse(inboxLogin.getContent()).asObject().get("logueate").asString();
-        
-        boolean salir = false;
-        while (!salir){
-            json = new JsonObject();
-            json.add("command","checkin");
-            this.enviarMensaje(new AgentID("Cerastes"), json, ACLMessage.REQUEST, conversationID, null);
+        while (!salirSubscribe){
+            while (mensajesCoordinador.isEmpty()){}
+            inbox = mensajesCoordinador.Pop();
+
+            JsonObject json= new JsonObject();
+            conversationID = Json.parse(inbox.getContent()).asObject().get("logueate").asString();
+
+            boolean salir = false;
+            while (!salir){
+                json = new JsonObject();
+                json.add("command","checkin");
+                this.enviarMensaje(new AgentID("Cerastes"), json, ACLMessage.REQUEST, conversationID, null);
+
+                while (mensajesServidor.isEmpty()){}
+                inbox = mensajesServidor.Pop(); 
+
+                // Si es un inform, terminamos
+                if (inbox.getPerformativeInt() == ACLMessage.INFORM){
+                    salir = true;
+                }
+            }
+
+            // Le mandamos al coordinador las capabilities y la información que nos da el GPS
+            replyWith = inbox.getReplyWith();
+            JsonObject mensajeCoordinador = Json.parse(inbox.getContent()).asObject();
+            this.enviarMensaje(new AgentID("Cerastes"), new JsonObject(), ACLMessage.QUERY_REF, conversationID, replyWith);
+            
+            while (mensajesServidor.isEmpty()){}
+            inbox = mensajesServidor.Pop();  
+            
+            replyWith = inbox.getReplyWith();
+            mensajeCoordinador.add("x",Json.parse(inbox.getContent()).asObject().get("result").asObject().get("x").asInt());
+            mensajeCoordinador.add("y",Json.parse(inbox.getContent()).asObject().get("result").asObject().get("y").asInt());
+            
+            this.enviarMensaje(new AgentID(nombreCoordinador),mensajeCoordinador,ACLMessage.INFORM,null,this.getName());
 
             while (mensajesCoordinador.isEmpty()){}
-            inboxLogin = mensajesCoordinador.Pop(); 
-            
-            if (inboxLogin.getPerformativeInt() == ACLMessage.INFORM){
-                salir = true;
-            }
+            inbox = mensajesCoordinador.Pop(); 
+
+            // Si recibimos un CANCEL, repetimos el bucle
+            if (inbox.getPerformativeInt() != ACLMessage.CANCEL)
+                salirSubscribe = true;
         }
-        
-        replyWith = inboxLogin.getReplyWith();
-        json = Json.parse(inboxLogin.getContent()).asObject();
-        this.enviarMensaje(new AgentID(nombreCoordinador),json,ACLMessage.INFORM,null,this.getName());
     }
     
     /**
@@ -115,9 +143,9 @@ public class Coches extends SuperAgent {
     public void enviarMensaje(AgentID receptor, JsonObject contenido, int performative, String conversationID, String replyWith){
         ACLMessage outbox = new ACLMessage();
         outbox.setSender(this.getAid());
-        outbox.setReceiver(new AgentID("Cerastes"));
+        outbox.setReceiver(receptor);
         outbox.setContent(contenido.toString());
-        outbox.setPerformative(ACLMessage.REQUEST);
+        outbox.setPerformative(performative);
         if (conversationID != null)
             outbox.setConversationId(conversationID);
         if (replyWith != null)
