@@ -13,6 +13,8 @@ import es.upv.dsic.gti_ia.core.ACLMessage;
 import es.upv.dsic.gti_ia.core.AgentID;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
+import javafx.util.Pair;
 
 /**
  *
@@ -203,36 +205,35 @@ public class Coordinador extends SuperAgent {
         
         // Como tenemos el tamaño del mapa, vamos a realizar el reparto de cuadrantes
         
-        int x,y;
+        // Asignación de cuadrantes
+        ArrayList<Pair> posiciones = new ArrayList<Pair>();
+        posiciones.add(new Pair(Json.parse(inbox.getContent()).asObject().get("x").asInt(),Json.parse(inbox.getContent()).asObject().get("y").asInt()));
+        posiciones.add(new Pair(Json.parse(inbox2.getContent()).asObject().get("x").asInt(),Json.parse(inbox.getContent()).asObject().get("y").asInt()));
+        posiciones.add(new Pair(Json.parse(inbox3.getContent()).asObject().get("x").asInt(),Json.parse(inbox.getContent()).asObject().get("y").asInt()));
+        posiciones.add(new Pair(Json.parse(inbox4.getContent()).asObject().get("x").asInt(),Json.parse(inbox.getContent()).asObject().get("y").asInt()));
+        ArrayList<Integer> asignacion = this.asignarCuadrantes(posiciones);
+        
         // Coche 1
-        x = Json.parse(inbox.getContent()).asObject().get("x").asInt();
-        y = Json.parse(inbox.getContent()).asObject().get("y").asInt();
         json = new JsonObject();
-        json.add("empieza",this.asignarCuadrante(x, y));
+        json.add("empieza",asignacion.get(0));
         json.add("tamanoMapa",tamanoMapa);
         this.enviarMensaje(new AgentID(nombreCoche1), json, null, ACLMessage.REQUEST, null, nombreCoche1); 
 
         // Coche 2
-        x = Json.parse(inbox2.getContent()).asObject().get("x").asInt();
-        y = Json.parse(inbox2.getContent()).asObject().get("y").asInt();
         json = new JsonObject();
-        json.add("empieza",this.asignarCuadrante(x, y));
+        json.add("empieza",asignacion.get(1));
         json.add("tamanoMapa",tamanoMapa);
         this.enviarMensaje(new AgentID(nombreCoche2), json, null, ACLMessage.REQUEST, null, nombreCoche2);  
 
         // Coche 3
-        x = Json.parse(inbox3.getContent()).asObject().get("x").asInt();
-        y = Json.parse(inbox3.getContent()).asObject().get("y").asInt();
         json = new JsonObject();
-        json.add("empieza",this.asignarCuadrante(x, y));
+        json.add("empieza",asignacion.get(2));
         json.add("tamanoMapa",tamanoMapa);
         this.enviarMensaje(new AgentID(nombreCoche3), json, null, ACLMessage.REQUEST, null, nombreCoche3); 
 
         // Coche 4
-        x = Json.parse(inbox4.getContent()).asObject().get("x").asInt();
-        y = Json.parse(inbox4.getContent()).asObject().get("y").asInt();
         json = new JsonObject();
-        json.add("empieza",this.asignarCuadrante(x, y));
+        json.add("empieza",asignacion.get(3));
         json.add("tamanoMapa",tamanoMapa);
         this.enviarMensaje(new AgentID(nombreCoche4), json, null, ACLMessage.REQUEST, null, nombreCoche4); 
 
@@ -254,17 +255,90 @@ public class Coordinador extends SuperAgent {
     *
     * @author Manuel Ros Rodríguez
     */   
-    public int asignarCuadrante(int x, int y){
-        int cuadrante = 0;
-        if (x > 0 && x < tamanoMapa/2 && y > 0 && y < tamanoMapa/2)
-            cuadrante = 1;
-        if (x > 0 && x < tamanoMapa/2 && y > tamanoMapa/2 && y < tamanoMapa)
-            cuadrante = 2;
-        if (x > tamanoMapa/2 && x < tamanoMapa && y > 0 && y < tamanoMapa/2)
-            cuadrante = 3;
-        if (x > tamanoMapa/2 && x < tamanoMapa && y > tamanoMapa/2 && y < tamanoMapa)
-            cuadrante = 4;   
-        return (cuadrante);
+    public ArrayList<Integer> asignarCuadrantes(ArrayList<Pair> posiciones){
+        ArrayList<Integer> asignacion = new ArrayList<Integer>();
+        boolean cuadranteOcupado1 = false;
+        boolean cuadranteOcupado2 = false;
+        boolean cuadranteOcupado3 = false;
+        boolean cuadranteOcupado4 = false;
+        int x,y = 0;
+        
+        for (int i=0; i<4; i++){
+            x = (int) posiciones.get(i).getKey();
+            y = (int) posiciones.get(i).getValue();
+            if (x > 0 && x < tamanoMapa/2 && y > 0 && y < tamanoMapa/2 && !cuadranteOcupado1){
+                asignacion.add(1);
+                cuadranteOcupado1 = true;
+            } else if (x > 0 && x < tamanoMapa/2 && y > tamanoMapa/2 && y < tamanoMapa && !cuadranteOcupado2){
+                asignacion.add(2);
+                cuadranteOcupado2 = true;
+            } else if (x > tamanoMapa/2 && x < tamanoMapa && y > 0 && y < tamanoMapa/2 && !cuadranteOcupado3){
+                asignacion.add(3);
+                cuadranteOcupado3 = true;
+            } else if (x > tamanoMapa/2 && x < tamanoMapa && y > tamanoMapa/2 && y < tamanoMapa && !cuadranteOcupado4){
+                asignacion.add(4); 
+                cuadranteOcupado4 = true;
+            } else {
+                asignacion.add(0);
+            }
+        }
+        
+        // Para los coches que no tienen un cuadrante asignado
+        for (int i=0; i<4; i++){
+            if (asignacion.get(i) == 0){
+                x = (int) posiciones.get(i).getKey();
+                y = (int) posiciones.get(i).getValue();
+                
+                // Probaremos con los cuadrantes más cercanos al que él está
+                if (x > 0 && x < tamanoMapa/2 && y > 0 && y < tamanoMapa/2){
+                    if (!cuadranteOcupado2){
+                        asignacion.set(i, 2);
+                        cuadranteOcupado2 = true;
+                    } else if (!cuadranteOcupado3){
+                        asignacion.set(i, 3);
+                        cuadranteOcupado3 = true;
+                    } else if (!cuadranteOcupado4){
+                        asignacion.set(i, 4);
+                        cuadranteOcupado4 = true;
+                    }
+                } else if (x > 0 && x < tamanoMapa/2 && y > tamanoMapa/2 && y < tamanoMapa){
+                    if (!cuadranteOcupado1){
+                        asignacion.set(i, 1);
+                        cuadranteOcupado1 = true;
+                    } else if (!cuadranteOcupado4){
+                        asignacion.set(i, 4);
+                        cuadranteOcupado4 = true;
+                    } else if (!cuadranteOcupado3){
+                        asignacion.set(i, 3);
+                        cuadranteOcupado3 = true;
+                    }
+                } else if (x > tamanoMapa/2 && x < tamanoMapa && y > 0 && y < tamanoMapa/2){
+                    if (!cuadranteOcupado1){
+                        asignacion.set(i, 1);
+                        cuadranteOcupado1 = true;
+                    } else if (!cuadranteOcupado4){
+                        asignacion.set(i, 4);
+                        cuadranteOcupado4 = true;
+                    } else if (!cuadranteOcupado2){
+                        asignacion.set(i, 2);
+                        cuadranteOcupado2 = true;
+                    }
+                } else if (x > tamanoMapa/2 && x < tamanoMapa && y > tamanoMapa/2 && y < tamanoMapa){
+                    if (!cuadranteOcupado3){
+                        asignacion.set(i, 3);
+                        cuadranteOcupado3 = true;
+                    } else if (!cuadranteOcupado2){
+                        asignacion.set(i, 2);
+                        cuadranteOcupado2 = true;
+                    } else if (!cuadranteOcupado1){
+                        asignacion.set(i, 1);
+                        cuadranteOcupado1 = true;
+                    }
+                }
+            }
+        }
+        
+        return (asignacion);
     }
     
     /**
