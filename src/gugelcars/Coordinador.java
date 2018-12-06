@@ -174,7 +174,6 @@ public class Coordinador extends SuperAgent {
         }
         
         // Vamos a comprobar si algún coche ha aparecido abajo del todo y si lo ha hecho tendremos el tamaño del mapa
-        int tamanoMapa = 0;
         if (Json.parse(inbox.getContent()).asObject().get("x").asInt() > 30)
             tamanoMapa = Json.parse(inbox.getContent()).asObject().get("x").asInt();
         else if (Json.parse(inbox2.getContent()).asObject().get("x").asInt() > 30)
