@@ -30,6 +30,7 @@ public class Coches extends SuperAgent {
     private String replyWith;
     private int tamanoMapa;
     private int cuadrante;
+    private boolean puedoVolar;
     
     public Coches(AgentID aid, String nombreCoordinador, String nombreCoche1, String nombreCoche2, String nombreCoche3, String nombreCoche4) throws Exception {
         super(aid);
@@ -45,6 +46,7 @@ public class Coches extends SuperAgent {
         replyWith = "";
         tamanoMapa = 0;
         cuadrante = 0;
+        puedoVolar = false;
     }
     
     /**
@@ -90,42 +92,42 @@ public class Coches extends SuperAgent {
     public void login() throws InterruptedException{
         boolean salirSubscribe = false;
         ACLMessage inbox = null;
+        JsonObject json;
         
         while (!salirSubscribe){
             while (mensajesCoordinador.isEmpty()){}
             inbox = mensajesCoordinador.Pop();
 
-            JsonObject json= new JsonObject();
+            json = new JsonObject();
             conversationID = Json.parse(inbox.getContent()).asObject().get("logueate").asString();
 
             boolean salir = false;
             while (!salir){
                 json = new JsonObject();
                 json.add("command","checkin");
-                this.enviarMensaje(new AgentID("Cerastes"), json, ACLMessage.REQUEST, conversationID, null);
+                this.enviarMensaje(new AgentID("Cerastes"), json, null, ACLMessage.REQUEST, conversationID, null);
 
                 while (mensajesServidor.isEmpty()){}
                 inbox = mensajesServidor.Pop(); 
 
                 // Si es un inform, terminamos
-                if (inbox.getPerformativeInt() == ACLMessage.INFORM){
+                if (inbox.getPerformativeInt() == ACLMessage.INFORM)
                     salir = true;
-                }
             }
 
             // Le mandamos al coordinador las capabilities y la información que nos da el GPS
             replyWith = inbox.getReplyWith();
             JsonObject mensajeCoordinador = Json.parse(inbox.getContent()).asObject();
-            this.enviarMensaje(new AgentID("Cerastes"), new JsonObject(), ACLMessage.QUERY_REF, conversationID, replyWith);
+            this.enviarMensaje(new AgentID("Cerastes"), new JsonObject(), null, ACLMessage.QUERY_REF, conversationID, replyWith);
             
             while (mensajesServidor.isEmpty()){}
             inbox = mensajesServidor.Pop();  
-            
             replyWith = inbox.getReplyWith();
-            mensajeCoordinador.add("x",Json.parse(inbox.getContent()).asObject().get("result").asObject().get("x").asInt());
-            mensajeCoordinador.add("y",Json.parse(inbox.getContent()).asObject().get("result").asObject().get("y").asInt());
             
-            this.enviarMensaje(new AgentID(nombreCoordinador),mensajeCoordinador,ACLMessage.INFORM,null,this.getName());
+            mensajeCoordinador.add("x", Json.parse(inbox.getContent()).asObject().get("result").asObject().get("x").asInt());
+            mensajeCoordinador.add("y", Json.parse(inbox.getContent()).asObject().get("result").asObject().get("y").asInt());
+            
+            this.enviarMensaje(new AgentID(nombreCoordinador), mensajeCoordinador, null, ACLMessage.INFORM, null, this.getName());
 
             while (mensajesCoordinador.isEmpty()){}
             inbox = mensajesCoordinador.Pop(); 
@@ -134,18 +136,59 @@ public class Coches extends SuperAgent {
             if (inbox.getPerformativeInt() != ACLMessage.CANCEL)
                 salirSubscribe = true;
         }
+        
+        if (inbox.getContent().contains("calcularTamanoMapa")){
+            // Si hemos recibido este mensajes es porque este coche puede volar
+            puedoVolar = true;
+            this.calcularTamanoMapa();
+            
+            json = new JsonObject();
+            json.add("tamanoMapa", tamanoMapa);
+            this.enviarMensaje(new AgentID(nombreCoordinador), json, null, ACLMessage.INFORM, null, this.getName());
+            
+            while (mensajesCoordinador.isEmpty()){}
+            inbox = mensajesCoordinador.Pop(); 
+        }
+        
+        if (puedoVolar){
+            // En este caso no nos hace falta sacar el tamaño del mapa, ya lo tenemos
+            cuadrante = Json.parse(inbox.getContent()).asObject().get("empieza").asInt();
+        } else {
+            cuadrante = Json.parse(inbox.getContent()).asObject().get("empieza").asInt();
+            tamanoMapa = Json.parse(inbox.getContent()).asObject().get("tamanoMapa").asInt();
+        }
+        
+        json = new JsonObject();
+        json.add("result", "OK");
+        this.enviarMensaje(new AgentID(nombreCoordinador), json, null, ACLMessage.INFORM, null, this.getName());        
     }
     
     /**
     *
     * @author Manuel Ros Rodríguez
+    * @author Adrian Martin Jaimez
+    */    
+    public void calcularTamanoMapa(){
+        // Esta parte es el mismo bucle que tiene que hacer adrian, cuando lo haga lo pegamos aqui y ya, por eso le pongo de author
+        // Nos movemos siempre para abajo, hasta encontrar una pared limite
+    }
+    
+    /**
+    *
+    * Envía un mensaje con los parametros que le digamos al receptor que le digamos
+    * Si hay algún argumento que no vamos a utilizar, escribir null
+    * 
+    * @author Manuel Ros Rodríguez
     */
-    public void enviarMensaje(AgentID receptor, JsonObject contenido, int performative, String conversationID, String replyWith){
+    public void enviarMensaje(AgentID receptor, JsonObject contenido, String contenidoString, int performative, String conversationID, String replyWith){
         ACLMessage outbox = new ACLMessage();
         outbox.setSender(this.getAid());
         outbox.setReceiver(receptor);
-        outbox.setContent(contenido.toString());
         outbox.setPerformative(performative);
+        if (contenido != null)
+            outbox.setContent(contenido.toString());
+        if (contenidoString != null)
+            outbox.setContent(contenidoString);
         if (conversationID != null)
             outbox.setConversationId(conversationID);
         if (replyWith != null)

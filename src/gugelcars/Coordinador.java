@@ -98,7 +98,6 @@ public class Coordinador extends SuperAgent {
         ACLMessage inbox3 = null;
         ACLMessage inbox4 = null;
         JsonObject json = null;
-        ACLMessage outbox = null;
         boolean salir;
         
         while (!salirSubscribe){
@@ -106,15 +105,14 @@ public class Coordinador extends SuperAgent {
             while (!salir){
                 json= new JsonObject();
                 json.add("world", mapa);
-                this.enviarMensaje(new AgentID("Cerastes"),json,ACLMessage.SUBSCRIBE,null,null);
+                this.enviarMensaje(new AgentID("Cerastes"), json, null, ACLMessage.SUBSCRIBE, null, null);
 
                 while (mensajesServidor.isEmpty()){}
                 inbox = mensajesServidor.Pop();
 
                 // Si es un inform, terminamos
-                if (inbox.getPerformativeInt() == ACLMessage.INFORM){
+                if (inbox.getPerformativeInt() == ACLMessage.INFORM)
                     salir = true;
-                }
             }
 
             conversationID = inbox.getConversationId();
@@ -122,10 +120,10 @@ public class Coordinador extends SuperAgent {
             // Ahora los coches van a hacer login
             json = new JsonObject();
             json.add("logueate",conversationID); 
-            this.enviarMensaje(new AgentID(nombreCoche1),json,ACLMessage.REQUEST,null,nombreCoche1);
-            this.enviarMensaje(new AgentID(nombreCoche2),json,ACLMessage.REQUEST,null,nombreCoche2);
-            this.enviarMensaje(new AgentID(nombreCoche3),json,ACLMessage.REQUEST,null,nombreCoche3);
-            this.enviarMensaje(new AgentID(nombreCoche4),json,ACLMessage.REQUEST,null,nombreCoche4);
+            this.enviarMensaje(new AgentID(nombreCoche1), json, null, ACLMessage.REQUEST, null, nombreCoche1);
+            this.enviarMensaje(new AgentID(nombreCoche2), json, null, ACLMessage.REQUEST, null, nombreCoche2);
+            this.enviarMensaje(new AgentID(nombreCoche3), json, null, ACLMessage.REQUEST, null, nombreCoche3);
+            this.enviarMensaje(new AgentID(nombreCoche4), json, null, ACLMessage.REQUEST, null, nombreCoche4);
 
             while (mensajesCoches.isEmpty()){}
             inbox = mensajesCoches.Pop();
@@ -160,11 +158,11 @@ public class Coordinador extends SuperAgent {
                 salirSubscribe = true;
             } else {
                 // No hemos conseguido lo que queríamos, mandamos cancel y vamos a repetir el subscribe
-                this.enviarMensaje(new AgentID(nombreCoche1),new JsonObject(),ACLMessage.CANCEL,null,null);
-                this.enviarMensaje(new AgentID(nombreCoche2),new JsonObject(),ACLMessage.CANCEL,null,null);
-                this.enviarMensaje(new AgentID(nombreCoche3),new JsonObject(),ACLMessage.CANCEL,null,null);
-                this.enviarMensaje(new AgentID(nombreCoche4),new JsonObject(),ACLMessage.CANCEL,null,null);    
-                this.enviarMensaje(new AgentID("Cerastes"),new JsonObject(),ACLMessage.CANCEL,null,null);
+                this.enviarMensaje(new AgentID(nombreCoche1), new JsonObject(), null, ACLMessage.CANCEL, null, null);
+                this.enviarMensaje(new AgentID(nombreCoche2), new JsonObject(), null, ACLMessage.CANCEL, null, null);
+                this.enviarMensaje(new AgentID(nombreCoche3), new JsonObject(), null, ACLMessage.CANCEL, null, null);
+                this.enviarMensaje(new AgentID(nombreCoche4), new JsonObject(), null, ACLMessage.CANCEL, null, null);    
+                this.enviarMensaje(new AgentID("Cerastes"), new JsonObject(), null, ACLMessage.CANCEL, null, null);
                 
                 // Recibimos AGREE y traza               
                 while (mensajesServidor.isEmpty()){}
@@ -194,56 +192,63 @@ public class Coordinador extends SuperAgent {
         if (tamanoMapa != 0 && tamanoMapa > 300 && tamanoMapa < 500)
             tamanoMapa = 500;
         
+        if (tamanoMapa == 0){
+           // No tenemos el tamaño del mapa, vamos a pedirle al volador que compruebe el tamaño
+            this.enviarMensaje(new AgentID(volador), null, "calcularTamanoMapa", ACLMessage.REQUEST, null, volador); 
+            
+            while (mensajesCoches.isEmpty()){}
+            ACLMessage otroInbox = mensajesCoches.Pop();
+
+            tamanoMapa = Json.parse(otroInbox.getContent()).asObject().get("tamanoMapa").asInt();
+        }
+        
+        // Como tenemos el tamaño del mapa, vamos a realizar el reparto de cuadrantes
+        
         int x,y;
-        if (tamanoMapa != 0){
-            // Como tenemos el tamaño del mapa, vamos a realizar el reparto de cuadrantes
-            // Coche 1
-            x = Json.parse(inbox.getContent()).asObject().get("x").asInt();
-            y = Json.parse(inbox.getContent()).asObject().get("y").asInt();
-            json = new JsonObject();
-            json.add("empieza",this.asignarCuadrante(x, y));
-            json.add("tamanoMapa",tamanoMapa);
-            this.enviarMensaje(new AgentID(nombreCoche1),json,ACLMessage.REQUEST,null,nombreCoche1); 
-            
-            // Coche 2
-            x = Json.parse(inbox2.getContent()).asObject().get("x").asInt();
-            y = Json.parse(inbox2.getContent()).asObject().get("y").asInt();
-            json = new JsonObject();
-            json.add("empieza",this.asignarCuadrante(x, y));
-            json.add("tamanoMapa",tamanoMapa);
-            this.enviarMensaje(new AgentID(nombreCoche2),json,ACLMessage.REQUEST,null,nombreCoche2);  
-            
-            // Coche 3
-            x = Json.parse(inbox3.getContent()).asObject().get("x").asInt();
-            y = Json.parse(inbox3.getContent()).asObject().get("y").asInt();
-            json = new JsonObject();
-            json.add("empieza",this.asignarCuadrante(x, y));
-            json.add("tamanoMapa",tamanoMapa);
-            this.enviarMensaje(new AgentID(nombreCoche3),json,ACLMessage.REQUEST,null,nombreCoche3); 
+        // Coche 1
+        x = Json.parse(inbox.getContent()).asObject().get("x").asInt();
+        y = Json.parse(inbox.getContent()).asObject().get("y").asInt();
+        json = new JsonObject();
+        json.add("empieza",this.asignarCuadrante(x, y));
+        json.add("tamanoMapa",tamanoMapa);
+        this.enviarMensaje(new AgentID(nombreCoche1), json, null, ACLMessage.REQUEST, null, nombreCoche1); 
 
-            // Coche 4
-            x = Json.parse(inbox4.getContent()).asObject().get("x").asInt();
-            y = Json.parse(inbox4.getContent()).asObject().get("y").asInt();
-            json = new JsonObject();
-            json.add("empieza",this.asignarCuadrante(x, y));
-            json.add("tamanoMapa",tamanoMapa);
-            this.enviarMensaje(new AgentID(nombreCoche4),json,ACLMessage.REQUEST,null,nombreCoche4); 
+        // Coche 2
+        x = Json.parse(inbox2.getContent()).asObject().get("x").asInt();
+        y = Json.parse(inbox2.getContent()).asObject().get("y").asInt();
+        json = new JsonObject();
+        json.add("empieza",this.asignarCuadrante(x, y));
+        json.add("tamanoMapa",tamanoMapa);
+        this.enviarMensaje(new AgentID(nombreCoche2), json, null, ACLMessage.REQUEST, null, nombreCoche2);  
 
-            // Recibimos confirmaciones de los coches
-            while (mensajesCoches.isEmpty()){}
-            inbox = mensajesCoches.Pop();
+        // Coche 3
+        x = Json.parse(inbox3.getContent()).asObject().get("x").asInt();
+        y = Json.parse(inbox3.getContent()).asObject().get("y").asInt();
+        json = new JsonObject();
+        json.add("empieza",this.asignarCuadrante(x, y));
+        json.add("tamanoMapa",tamanoMapa);
+        this.enviarMensaje(new AgentID(nombreCoche3), json, null, ACLMessage.REQUEST, null, nombreCoche3); 
 
-            while (mensajesCoches.isEmpty()){}
-            inbox = mensajesCoches.Pop();
+        // Coche 4
+        x = Json.parse(inbox4.getContent()).asObject().get("x").asInt();
+        y = Json.parse(inbox4.getContent()).asObject().get("y").asInt();
+        json = new JsonObject();
+        json.add("empieza",this.asignarCuadrante(x, y));
+        json.add("tamanoMapa",tamanoMapa);
+        this.enviarMensaje(new AgentID(nombreCoche4), json, null, ACLMessage.REQUEST, null, nombreCoche4); 
 
-            while (mensajesCoches.isEmpty()){}
-            inbox = mensajesCoches.Pop();
+        // Recibimos confirmaciones de los coches
+        while (mensajesCoches.isEmpty()){}
+        inbox = mensajesCoches.Pop();
 
-            while (mensajesCoches.isEmpty()){}
-            inbox = mensajesCoches.Pop();            
-        } else {
-            // No tenemos el tamaño del mapa, vamos a pedirle al volador que compruebe el tamaño
-        } 
+        while (mensajesCoches.isEmpty()){}
+        inbox = mensajesCoches.Pop();
+
+        while (mensajesCoches.isEmpty()){}
+        inbox = mensajesCoches.Pop();
+
+        while (mensajesCoches.isEmpty()){}
+        inbox = mensajesCoches.Pop();            
     }
     
     /**
@@ -265,14 +270,20 @@ public class Coordinador extends SuperAgent {
     
     /**
     *
+    * Envía un mensaje con los parametros que le digamos al receptor que le digamos
+    * Si hay algún argumento que no vamos a utilizar, escribir null
+    * 
     * @author Manuel Ros Rodríguez
     */
-    public void enviarMensaje(AgentID receptor, JsonObject contenido, int performative, String conversationID, String replyWith){
+    public void enviarMensaje(AgentID receptor, JsonObject contenido, String contenidoString, int performative, String conversationID, String replyWith){
         ACLMessage outbox = new ACLMessage();
         outbox.setSender(this.getAid());
         outbox.setReceiver(receptor);
-        outbox.setContent(contenido.toString());
         outbox.setPerformative(performative);
+        if (contenido != null)
+            outbox.setContent(contenido.toString());
+        if (contenidoString != null)
+            outbox.setContent(contenidoString);
         if (conversationID != null)
             outbox.setConversationId(conversationID);
         if (replyWith != null)
@@ -295,7 +306,7 @@ public class Coordinador extends SuperAgent {
                     data[i] = (byte) array.get(i).asInt();
             }
             FileOutputStream fos;
-            fos = new FileOutputStream("traza"+this.mapa+".png");
+            fos = new FileOutputStream(conversationID+"_"+mapa+".png");
             fos.write(data);
             fos.close();
             System.out.println("Imagen creada");
