@@ -388,6 +388,41 @@ public class Coordinador extends SuperAgent {
         }
     }
     
+    /**
+    * 
+    * Hace el logout al servidor y a los coches después de recibir que los coches han terminado
+    * Si recibe un INFORM crea la imagen, si recibe un AGREE busca el siguiente mensaje
+    *
+    * @author Alejandro García
+    */
+    public void logout() throws InterruptedException{
+        
+        ACLMessage inbox = null;
+        ACLMessage inbox2 = null;
+        JsonObject json = null;
+        
+        this.enviarMensaje(new AgentID(nombreCoche1), new JsonObject(), null, ACLMessage.CANCEL, null, null);
+        this.enviarMensaje(new AgentID(nombreCoche2), new JsonObject(), null, ACLMessage.CANCEL, null, null);
+        this.enviarMensaje(new AgentID(nombreCoche3), new JsonObject(), null, ACLMessage.CANCEL, null, null);
+        this.enviarMensaje(new AgentID(nombreCoche4), new JsonObject(), null, ACLMessage.CANCEL, null, null);    
+        this.enviarMensaje(new AgentID("Cerastes"), new JsonObject(), null, ACLMessage.CANCEL, null, null);
+
+        // Recibimos AGREE o traza               
+        while (mensajesServidor.isEmpty()){}
+        inbox = mensajesServidor.Pop(); 
+        
+        // Comprobamos si es un agree o la traza
+        if (inbox.getPerformativeInt() == ACLMessage.INFORM){
+            json = Json.parse(inbox.getContent()).asObject();
+            this.crearImagen(json);
+        } else if (inbox.getPerformativeInt() == ACLMessage.AGREE){
+            while (mensajesServidor.isEmpty()){}
+            inbox2 = mensajesServidor.Pop();
+            json = Json.parse(inbox2.getContent()).asObject();
+            this.crearImagen(json);
+        } 
+        
+    }
     
     /**
     *
