@@ -31,6 +31,7 @@ public class Coches extends SuperAgent {
     private int tamanoMapa;
     private int cuadrante;
     private boolean puedoVolar;
+    private int prioridad;
     
     public Coches(AgentID aid, String nombreCoordinador, String nombreCoche1, String nombreCoche2, String nombreCoche3, String nombreCoche4) throws Exception {
         super(aid);
@@ -47,6 +48,7 @@ public class Coches extends SuperAgent {
         tamanoMapa = 0;
         cuadrante = 0;
         puedoVolar = false;
+        prioridad = 0;
     }
     
     /**
@@ -163,6 +165,140 @@ public class Coches extends SuperAgent {
         this.enviarMensaje(new AgentID(nombreCoordinador), json, null, ACLMessage.INFORM, null, this.getName());        
     }
     
+    /**
+     * @author Adrian Martin Jaimez
+     * 
+     * No tengo muy claro que nombre es el de este metodo
+     */
+    
+    public void explorar() throws InterruptedException{
+        boolean veoMeta = false;
+        ACLMessage inbox = null;
+        JsonObject json;
+        int bateria = 0;
+
+        while (mensajesCoordinador.isEmpty()){};
+        inbox = mensajesCoordinador.Pop();
+        json = new JsonObject();
+        conversationID = Json.parse(inbox.getContent()).asObject().get("empieza").asString();
+        
+        while(!veoMeta){
+            this.enviarMensaje(new AgentID("Cerastes"), null, null, ACLMessage.QUERY_REF, conversationID, null);
+            while (mensajesServidor.isEmpty()){}
+                inbox = mensajesServidor.Pop(); 
+
+                // Si es un inform, guardamos los datos
+                if (inbox.getPerformativeInt() == ACLMessage.INFORM){
+                    bateria = Json.parse(inbox.getContent()).asObject().get("result").asObject().get("battery").asInt();
+                }else{
+                    //exit();
+                }
+                
+                if(bateria <= 1){
+                    json = new JsonObject();
+                    json.add("command","refuel");
+                    this.enviarMensaje(new AgentID("Cerastes"), json, null, ACLMessage.REQUEST, conversationID, null);
+                    while (mensajesServidor.isEmpty()){}
+                        inbox = mensajesServidor.Pop(); 
+                    if (inbox.getPerformativeInt() != ACLMessage.INFORM){
+                        //exit()
+                    }
+                }else{
+                    json = new JsonObject();
+                    json.add("command","moveX");
+                    this.enviarMensaje(new AgentID("Cerastes"), json, null, ACLMessage.REQUEST, conversationID, null);
+                    while (mensajesServidor.isEmpty()){}
+                        inbox = mensajesServidor.Pop(); 
+                    if (inbox.getPerformativeInt() != ACLMessage.INFORM){
+                        //exit()
+                    }
+                }
+                    
+        }
+        
+        
+    }
+    
+       /**
+     * @author Adrian Martin Jaimez
+     * 
+     * No tengo muy claro que nombre es el de este metodo
+     */
+    
+    public void irAMeta() throws InterruptedException{
+        boolean goal = false;
+        ACLMessage inbox = null;
+        JsonObject json;
+        int bateria = 0;
+
+        while (mensajesCoordinador.isEmpty()){};
+        inbox = mensajesCoordinador.Pop();
+        json = new JsonObject();
+        conversationID = Json.parse(inbox.getContent()).asObject().get("empieza").asString();
+        
+        while(!goal){
+            this.enviarMensaje(new AgentID("Cerastes"), null, null, ACLMessage.QUERY_REF, conversationID, null);
+            while (mensajesServidor.isEmpty()){}
+                inbox = mensajesServidor.Pop(); 
+
+                // Si es un inform, guardamos los datos
+                if (inbox.getPerformativeInt() == ACLMessage.INFORM){
+                    bateria = Json.parse(inbox.getContent()).asObject().get("result").asObject().get("battery").asInt();
+                }else{
+                    //exit();
+                }
+                
+                if(bateria <= 1){
+                    json = new JsonObject();
+                    json.add("command","refuel");
+                    this.enviarMensaje(new AgentID("Cerastes"), json, null, ACLMessage.REQUEST, conversationID, null);
+                    while (mensajesServidor.isEmpty()){}
+                        inbox = mensajesServidor.Pop(); 
+                    if (inbox.getPerformativeInt() != ACLMessage.INFORM){
+                        //exit()
+                    }
+                }else{
+                    json = new JsonObject();
+                    json.add("command","moveX");
+                    this.enviarMensaje(new AgentID("Cerastes"), json, null, ACLMessage.REQUEST, conversationID, null);
+                    while (mensajesServidor.isEmpty()){}
+                        inbox = mensajesServidor.Pop(); 
+                    if (inbox.getPerformativeInt() != ACLMessage.INFORM){
+                        //exit()
+                    }
+                }
+                    
+        }
+        
+        
+    }
+    
+    /**
+     * @author Adrian Martin Jaimez 
+     * 
+     */
+    public void trafico() throws InterruptedException{
+        ACLMessage inbox = null;
+        JsonObject json;
+        int suPrioridad=0;
+        while (mensajesCoches.isEmpty()){};
+        inbox = mensajesCoches.Pop();
+        json = new JsonObject();
+        conversationID = Json.parse(inbox.getContent()).asObject().get("empieza").asString();
+    
+        this.enviarMensaje(new AgentID("OTROCOCHE"), null, null, ACLMessage.QUERY_REF, conversationID, null);
+        if (inbox.getPerformativeInt() == ACLMessage.INFORM){
+            suPrioridad = Json.parse(inbox.getContent()).asObject().get("prioridad").asObject().asInt();
+        }else{
+            //exit();
+        }
+        
+        if(suPrioridad>this.prioridad){
+            this.enviarMensaje(new AgentID("OTROCOCHE"), json, null, ACLMessage.REQUEST, conversationID, null);
+        }else{
+            //no me muevo
+        }
+    }
     /**
     *
     * @author Manuel Ros Rodríguez
