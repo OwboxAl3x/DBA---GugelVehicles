@@ -83,6 +83,7 @@ public class Coordinador extends SuperAgent {
     public void execute(){
         try {
             this.login();
+            System.out.print("ejecutado");
         } catch (InterruptedException e){
             System.out.println("Error al sacar mensaje de la cola");
         }
@@ -251,7 +252,7 @@ public class Coordinador extends SuperAgent {
     }
     
     public ACLMessage recibirMensaje(MessageQueue cola) throws InterruptedException{
-        while (cola.isEmpty()){Thread.sleep(500);}
+        while (cola.isEmpty()){this.sleep(500);}
         return (cola.Pop());
     }
     
