@@ -22,7 +22,7 @@ public class GugelCars  {
         AgentsConnection.connect("isg2.ugr.es", 6000, "Cerastes", "Boyero", "Carducci", false);
         
         try {
-            int numeroInicial = 1;
+            int numeroInicial = 4;
             String nombreCoche1 = "car"+numeroInicial;
             String nombreCoche2 = "car"+numeroInicial+1;
             String nombreCoche3 = "car"+numeroInicial+2;
@@ -36,7 +36,6 @@ public class GugelCars  {
             coches[2] = new Coches(new AgentID(nombreCoche3),nombreCoordinador, nombreCoche1, nombreCoche2, nombreCoche3, nombreCoche4);
             coches[3] = new Coches(new AgentID(nombreCoche4),nombreCoordinador, nombreCoche1, nombreCoche2, nombreCoche3, nombreCoche4);
             coordinador = new Coordinador(new AgentID(nombreCoordinador), nombreCoche1, nombreCoche2, nombreCoche3, nombreCoche4, mapa);            
-            
             
         } catch (Exception ex) {
             

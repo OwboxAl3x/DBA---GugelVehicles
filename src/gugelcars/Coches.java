@@ -75,9 +75,9 @@ public class Coches extends SuperAgent {
     */     
     public void onMessage(ACLMessage msg)  {
 	try {
-            if (msg.getSender().equals(new AgentID(nombreCoordinador))){
+            if (msg.getSender().toString().contains(nombreCoordinador)){
                 mensajesCoordinador.Push(msg);
-            } else if (msg.getSender().equals(new AgentID("Cerastes"))){
+            } else if (msg.getSender().toString().contains("Cerastes")){
                 mensajesServidor.Push(msg); 
             } else {
                 mensajesCoches.Push(msg);
@@ -106,8 +106,7 @@ public class Coches extends SuperAgent {
         JsonObject json;
         
         while (!salirSubscribe){
-            while (mensajesCoordinador.isEmpty()){}
-            inbox = mensajesCoordinador.Pop();
+            inbox = this.recibirMensaje(mensajesCoordinador);
 
             json = new JsonObject();
             conversationID = Json.parse(inbox.getContent()).asObject().get("logueate").asString();
@@ -118,8 +117,7 @@ public class Coches extends SuperAgent {
                 json.add("command","checkin");
                 this.enviarMensaje(new AgentID("Cerastes"), json, null, ACLMessage.REQUEST, conversationID, null);
 
-                while (mensajesServidor.isEmpty()){}
-                inbox = mensajesServidor.Pop(); 
+                inbox = this.recibirMensaje(mensajesServidor);
 
                 // Si es un inform, terminamos
                 if (inbox.getPerformativeInt() == ACLMessage.INFORM)
@@ -131,8 +129,7 @@ public class Coches extends SuperAgent {
             JsonObject mensajeCoordinador = Json.parse(inbox.getContent()).asObject();
             this.enviarMensaje(new AgentID("Cerastes"), new JsonObject(), null, ACLMessage.QUERY_REF, conversationID, replyWith);
             
-            while (mensajesServidor.isEmpty()){}
-            inbox = mensajesServidor.Pop();  
+            inbox = this.recibirMensaje(mensajesServidor); 
             replyWith = inbox.getReplyWith();
             
             mensajeCoordinador.add("x", Json.parse(inbox.getContent()).asObject().get("result").asObject().get("x").asInt());
@@ -140,13 +137,13 @@ public class Coches extends SuperAgent {
             
             this.enviarMensaje(new AgentID(nombreCoordinador), mensajeCoordinador, null, ACLMessage.INFORM, null, this.getName());
 
-            while (mensajesCoordinador.isEmpty()){}
-            inbox = mensajesCoordinador.Pop(); 
+            inbox = this.recibirMensaje(mensajesCoordinador);
 
             // Si recibimos un CANCEL, repetimos el bucle
             if (inbox.getPerformativeInt() != ACLMessage.CANCEL)
                 salirSubscribe = true;
         }
+        System.out.println("ohsi");
         
         if (inbox.getContent().contains("calcularTamanoMapa")){
             // Si hemos recibido este mensajes es porque este coche puede volar
@@ -172,6 +169,11 @@ public class Coches extends SuperAgent {
         json = new JsonObject();
         json.add("result", "OK");
         this.enviarMensaje(new AgentID(nombreCoordinador), json, null, ACLMessage.INFORM, null, this.getName());        
+    }
+    
+    public ACLMessage recibirMensaje(MessageQueue cola) throws InterruptedException{
+        while (cola.isEmpty()){Thread.sleep(500);}
+        return (cola.Pop());
     }
     
     /**

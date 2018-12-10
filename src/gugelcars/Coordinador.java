@@ -63,7 +63,8 @@ public class Coordinador extends SuperAgent {
     */     
     public void onMessage(ACLMessage msg)  {
 	try {
-            if (msg.getSender().equals(new AgentID("Cerastes"))){
+            if (msg.getSender().toString().contains("Cerastes")){
+                System.out.println("cola:"+msg.toString());
                 mensajesServidor.Push(msg);
             } else {
                 mensajesCoches.Push(msg); 
@@ -108,17 +109,25 @@ public class Coordinador extends SuperAgent {
                 json= new JsonObject();
                 json.add("world", mapa);
                 this.enviarMensaje(new AgentID("Cerastes"), json, null, ACLMessage.SUBSCRIBE, null, null);
-
-                while (mensajesServidor.isEmpty()){}
-                inbox = mensajesServidor.Pop();
-
+                System.out.println("probando1");
+                
+                inbox = this.recibirMensaje(mensajesServidor);
+                
+                if (inbox.getContent().contains("trace")){
+                    System.out.println("traza recibida: "+inbox.toString());
+                    inbox = this.recibirMensaje(mensajesServidor); 
+                }
+                System.out.println("probando2"+inbox.toString());
+                
                 // Si es un inform, terminamos
                 if (inbox.getPerformativeInt() == ACLMessage.INFORM)
                     salir = true;
+                
+                salirSubscribe = true;
             }
-
+        
             conversationID = inbox.getConversationId();
-
+            
             // Ahora los coches van a hacer login
             json = new JsonObject();
             json.add("logueate",conversationID); 
@@ -127,17 +136,14 @@ public class Coordinador extends SuperAgent {
             this.enviarMensaje(new AgentID(nombreCoche3), json, null, ACLMessage.REQUEST, null, nombreCoche3);
             this.enviarMensaje(new AgentID(nombreCoche4), json, null, ACLMessage.REQUEST, null, nombreCoche4);
 
-            while (mensajesCoches.isEmpty()){}
-            inbox = mensajesCoches.Pop();
+            inbox = this.recibirMensaje(mensajesCoches);
+            System.out.println(inbox.toString());
 
-            while (mensajesCoches.isEmpty()){}
-            inbox2 = mensajesCoches.Pop();
+            inbox2 = this.recibirMensaje(mensajesCoches);
 
-            while (mensajesCoches.isEmpty()){}
-            inbox3 = mensajesCoches.Pop();
+            inbox3 = this.recibirMensaje(mensajesCoches);
 
-            while (mensajesCoches.isEmpty()){}
-            inbox4 = mensajesCoches.Pop();
+            inbox4 = this.recibirMensaje(mensajesCoches);
 
             // Comprobamos si hay algún volador
             if (Json.parse(inbox.getContent()).asObject().get("capabilities").asObject().get("fly").asBoolean() == true)
@@ -167,11 +173,9 @@ public class Coordinador extends SuperAgent {
                 this.enviarMensaje(new AgentID("Cerastes"), new JsonObject(), null, ACLMessage.CANCEL, null, null);
                 
                 // Recibimos AGREE y traza               
-                while (mensajesServidor.isEmpty()){}
-                inbox = mensajesServidor.Pop(); 
+                inbox = this.recibirMensaje(mensajesServidor);
                 
-                while (mensajesServidor.isEmpty()){}
-                inbox = mensajesServidor.Pop();     
+                inbox = this.recibirMensaje(mensajesServidor);   
             }
         }
         
@@ -197,8 +201,7 @@ public class Coordinador extends SuperAgent {
            // No tenemos el tamaño del mapa, vamos a pedirle al volador que compruebe el tamaño
             this.enviarMensaje(new AgentID(volador), null, "calcularTamanoMapa", ACLMessage.REQUEST, null, volador); 
             
-            while (mensajesCoches.isEmpty()){}
-            ACLMessage otroInbox = mensajesCoches.Pop();
+            ACLMessage otroInbox = this.recibirMensaje(mensajesCoches);
 
             tamanoMapa = Json.parse(otroInbox.getContent()).asObject().get("tamanoMapa").asInt();
         }
@@ -238,17 +241,18 @@ public class Coordinador extends SuperAgent {
         this.enviarMensaje(new AgentID(nombreCoche4), json, null, ACLMessage.REQUEST, null, nombreCoche4); 
 
         // Recibimos confirmaciones de los coches
-        while (mensajesCoches.isEmpty()){}
-        inbox = mensajesCoches.Pop();
+        inbox = this.recibirMensaje(mensajesCoches);
 
-        while (mensajesCoches.isEmpty()){}
-        inbox = mensajesCoches.Pop();
+        inbox = this.recibirMensaje(mensajesCoches);
 
-        while (mensajesCoches.isEmpty()){}
-        inbox = mensajesCoches.Pop();
+        inbox = this.recibirMensaje(mensajesCoches);
 
-        while (mensajesCoches.isEmpty()){}
-        inbox = mensajesCoches.Pop();            
+        inbox = this.recibirMensaje(mensajesCoches);
+    }
+    
+    public ACLMessage recibirMensaje(MessageQueue cola) throws InterruptedException{
+        while (cola.isEmpty()){Thread.sleep(500);}
+        return (cola.Pop());
     }
     
     /**
