@@ -7,12 +7,14 @@ package gugelcars;
 
 import DBA.SuperAgent;
 import com.eclipsesource.json.Json;
+import com.eclipsesource.json.JsonArray;
 import com.eclipsesource.json.JsonObject;
 import es.upv.dsic.gti_ia.core.ACLMessage;
 import es.upv.dsic.gti_ia.core.AgentID;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.TreeMap;
+import javafx.util.Pair;
 
 /**
  *
@@ -37,6 +39,11 @@ public class Coches extends SuperAgent {
     private int prioridad;
     
     private double bateria = 0.0;
+    private boolean finRefuel = false;
+    private boolean objetivoEncontrado = false;
+    private boolean irCuadrante = true;
+    private boolean escanerCuadranteCreado = false;
+    private boolean escanerObjetivoCreado = false;
     private int x;
     private int y;
     private ArrayList<ArrayList<Integer>> mapaPasos = new ArrayList<>();
@@ -96,6 +103,7 @@ public class Coches extends SuperAgent {
         try {
             this.login();
             System.out.print("ejecutado");
+            this.comportamiento();
         } catch (InterruptedException e){
             System.out.println("Error al sacar mensaje de la cola");
         }
@@ -133,6 +141,11 @@ public class Coches extends SuperAgent {
             inbox = this.recibirMensaje(mensajesServidor); 
             replyWith = inbox.getReplyWith();
             
+            // Comprobamos si somos volador
+            if (mensajeCoordinador.get("capabilities").asObject().get("fly").asBoolean() == true)
+                puedoVolar = true;
+            
+            // Terminamos de preparar el mensaje para el coordinador y se lo enviamos
             mensajeCoordinador.add("x", Json.parse(inbox.getContent()).asObject().get("result").asObject().get("x").asInt());
             mensajeCoordinador.add("y", Json.parse(inbox.getContent()).asObject().get("result").asObject().get("y").asInt());
             
@@ -146,26 +159,8 @@ public class Coches extends SuperAgent {
         }
         System.out.println("ohsi");
         
-        if (inbox.getContent().contains("calcularTamanoMapa")){
-            // Si hemos recibido este mensajes es porque este coche puede volar
-            puedoVolar = true;
-            this.calcularTamanoMapa();
-            
-            json = new JsonObject();
-            json.add("tamanoMapa", tamanoMapa);
-            this.enviarMensaje(new AgentID(nombreCoordinador), json, null, ACLMessage.INFORM, null, this.getName());
-            
-            while (mensajesCoordinador.isEmpty()){}
-            inbox = mensajesCoordinador.Pop(); 
-        }
-        
-        if (puedoVolar){
-            // En este caso no nos hace falta sacar el tamaño del mapa, ya lo tenemos
-            cuadrante = Json.parse(inbox.getContent()).asObject().get("empieza").asInt();
-        } else {
-            cuadrante = Json.parse(inbox.getContent()).asObject().get("empieza").asInt();
-            tamanoMapa = Json.parse(inbox.getContent()).asObject().get("tamanoMapa").asInt();
-        }
+        cuadrante = Json.parse(inbox.getContent()).asObject().get("empieza").asInt();
+        tamanoMapa = Json.parse(inbox.getContent()).asObject().get("tamanoMapa").asInt();
         
         json = new JsonObject();
         json.add("result", "OK");
@@ -177,116 +172,173 @@ public class Coches extends SuperAgent {
         return (cola.Pop());
     }
     
-    /**
-     * @author Adrian Martin Jaimez
+     /**
      * 
-     * No tengo muy claro que nombre es el de este metodo
+     * Método principal de los coches, donde se decide que acción va a hacer
+     * 
+     * @author Adrian Martin Jaimez
+     * @author Manuel Ros Rodríguez
+     * 
      */
-    
-    public void explorar() throws InterruptedException{
-        boolean veoMeta = false;
+    public void comportamiento() throws InterruptedException{
+        boolean salir = false;
         ACLMessage inbox = null;
         JsonObject json;
-        int bateria = 0;
-
-        while (mensajesCoordinador.isEmpty()){};
-        inbox = mensajesCoordinador.Pop();
-        json = new JsonObject();
-        conversationID = Json.parse(inbox.getContent()).asObject().get("empieza").asString();
         
-        while(!veoMeta){
+        while (!salir){
+            // Pedimos percepción y la recibimos
             this.enviarMensaje(new AgentID("Cerastes"), null, null, ACLMessage.QUERY_REF, conversationID, null);
-            while (mensajesServidor.isEmpty()){}
-                inbox = mensajesServidor.Pop(); 
-
-                // Si es un inform, guardamos los datos
-                if (inbox.getPerformativeInt() == ACLMessage.INFORM){
-                    bateria = Json.parse(inbox.getContent()).asObject().get("result").asObject().get("battery").asInt();
-                }else{
-                    //exit();
+            inbox = this.recibirMensaje(mensajesServidor);
+            JsonObject percepcionJson = Json.parse(inbox.getContent()).asObject();
+            
+            /*
+            trafico
+            */
+            
+            // Actualizamos nuestra posición
+            x = percepcionJson.get("gps").asObject().get("x").asInt();
+            y = percepcionJson.get("gps").asObject().get("y").asInt();
+            
+            // Comprobamos si hemos llegado al cuadrante
+            if (cuadrante == 1 && x > 0 && x < tamanoMapa/2 && y > 0 && y < tamanoMapa/2){
+                irCuadrante = false;
+            } else if (cuadrante == 2 && x > 0 && x < tamanoMapa/2 && y > tamanoMapa/2 && y < tamanoMapa){
+                irCuadrante = false;
+            } else if (cuadrante == 3 && x > tamanoMapa/2 && x < tamanoMapa && y > 0 && y < tamanoMapa/2){
+                irCuadrante = false;
+            } else if (cuadrante == 4 && x > tamanoMapa/2 && x < tamanoMapa && y > tamanoMapa/2 && y < tamanoMapa){
+                irCuadrante = false;
+            }
+            
+            // Inicializamos bateria
+            if (bateria == 0.0)
+                bateria = Json.parse(inbox.getContent()).asObject().get("result").asObject().get("battery").asInt();
+     
+            // Comprobamos bateria
+            if (bateria <= 1){
+                json = new JsonObject();
+                json.add("command","refuel");
+                this.enviarMensaje(new AgentID("Cerastes"), json, null, ACLMessage.REQUEST, conversationID, null);
+                inbox = this.recibirMensaje(mensajesServidor);
+                
+                if (inbox.getPerformativeInt() == ACLMessage.REFUSE)
+                    finRefuel = true;
+            }
+            
+            // Comprobamos si estamos en el objetivo, en ese caso se avisa al coordinador
+            JsonArray radar = percepcionJson.get("result").asObject().get("radar").asArray();
+            int posicionRadar = -1;
+            for (int i=0; i<radar.size() && !objetivoEncontrado; i++){
+                if (radar.get(i).asInt() == 3){
+                    objetivoEncontrado = true;
+                    posicionRadar = i;
+                }
+            }
+                
+            if (objetivoEncontrado){
+                json = new JsonObject();
+                JsonObject jsonCoordenadas = new JsonObject();
+                Pair<Integer,Integer> coordenadas = this.coordenadasCasillaRadar(radar.size(), posicionRadar);
+                jsonCoordenadas.add("x",coordenadas.getKey());
+                jsonCoordenadas.add("y",coordenadas.getValue());
+                json.add("objetivoEncontrado",jsonCoordenadas);
+                
+                this.enviarMensaje(new AgentID(nombreCoordinador), json, null, ACLMessage.INFORM, null, null); // CHECK**
+            }
+            
+            // Comprobamos en que modo estamos y nos movemos
+            if ((finRefuel && bateria <= 1) || valoRadar(percepcionJson.get("radar").asArray(),12) == 2){
+                json = new JsonObject();
+                json.add("heTerminado","OK");
+                this.enviarMensaje(new AgentID(nombreCoordinador), json, null, ACLMessage.INFORM, null, null);
+                
+                salir = true;
+            } else {
+                String movimiento;
+                
+                // * falta comprobar si fuera del cuadrante
+                if (irCuadrante){
+                    if (!escanerCuadranteCreado)
+                        this.construirEscanerCuadrante(tamanoMapa); // *size de esto?
+                    movimiento = this.irObjetivo(percepcionJson);
+                } else if (!objetivoEncontrado){                  
+                    movimiento = this.explorar();
+                } else {
+                    if (!escanerObjetivoCreado)
+                        this.construirEscanerObjetivo(tamanoMapa); // *size de esto?  
+                    movimiento = this.irObjetivo(percepcionJson);
                 }
                 
-                if(bateria <= 1){
-                    json = new JsonObject();
-                    json.add("command","refuel");
-                    this.enviarMensaje(new AgentID("Cerastes"), json, null, ACLMessage.REQUEST, conversationID, null);
-                    while (mensajesServidor.isEmpty()){}
-                        inbox = mensajesServidor.Pop(); 
-                    if (inbox.getPerformativeInt() != ACLMessage.INFORM){
-                        //exit()
-                    }
-                }else{
-                    json = new JsonObject();
-                    json.add("command","moveX");
-                    this.enviarMensaje(new AgentID("Cerastes"), json, null, ACLMessage.REQUEST, conversationID, null);
-                    while (mensajesServidor.isEmpty()){}
-                        inbox = mensajesServidor.Pop(); 
-                    if (inbox.getPerformativeInt() != ACLMessage.INFORM){
-                        //exit()
-                    }
-                }
-                    
+                json = new JsonObject();
+                json.add("command",movimiento);
+                this.enviarMensaje(new AgentID("Cerastes"), json, null, ACLMessage.REQUEST, conversationID, null);
+                inbox = this.recibirMensaje(mensajesServidor);
+                
+                bateria--;
+            }          
         }
         
-        
+        // El coche ha terminado y espera el cancel del coordinador
+        inbox = this.recibirMensaje(mensajesCoordinador);
     }
     
-       /**
-     * @author Adrian Martin Jaimez
+    public String explorar(){
+        String movimiento = "";
+        
+        if (puedoVolar){
+            
+        } else {
+            
+        }
+        
+        return (movimiento);
+    }
+    
+    public void construirEscanerObjetivo(int size){
+        
+    }
+
+     /**
      * 
-     * No tengo muy claro que nombre es el de este metodo
-     */
-    
-    public void irAMeta() throws InterruptedException{
-        boolean goal = false;
-        ACLMessage inbox = null;
-        JsonObject json;
-        int bateria = 0;
-
-        while (mensajesCoordinador.isEmpty()){};
-        inbox = mensajesCoordinador.Pop();
-        json = new JsonObject();
-        conversationID = Json.parse(inbox.getContent()).asObject().get("empieza").asString();
+     * @author Manuel Ros Rodríguez
+     * 
+     */    
+    public Pair<Integer,Integer> coordenadasCasillaRadar(int tamanoRadar, int posicion){
+        ArrayList<Pair<Integer,Integer>> radarPosiciones = new ArrayList<Pair<Integer,Integer>>();
         
-        while(!goal){
-            this.enviarMensaje(new AgentID("Cerastes"), null, null, ACLMessage.QUERY_REF, conversationID, null);
-            while (mensajesServidor.isEmpty()){}
-                inbox = mensajesServidor.Pop(); 
-
-                // Si es un inform, guardamos los datos
-                if (inbox.getPerformativeInt() == ACLMessage.INFORM){
-                    bateria = Json.parse(inbox.getContent()).asObject().get("result").asObject().get("battery").asInt();
-                }else{
-                    //exit();
+        if (tamanoRadar <= 9){
+            for (int i=0; i<3; i++){
+                for (int j=0; j<3; j++){
+                    int dif_x = (1-i)*(-1);
+                    int dif_y = (1-j)*(-1);
+                    radarPosiciones.add(new Pair(x+dif_x,y+dif_y));
                 }
-                
-                if(bateria <= 1){
-                    json = new JsonObject();
-                    json.add("command","refuel");
-                    this.enviarMensaje(new AgentID("Cerastes"), json, null, ACLMessage.REQUEST, conversationID, null);
-                    while (mensajesServidor.isEmpty()){}
-                        inbox = mensajesServidor.Pop(); 
-                    if (inbox.getPerformativeInt() != ACLMessage.INFORM){
-                        //exit()
-                    }
-                }else{
-                    json = new JsonObject();
-                    json.add("command","moveX");
-                    this.enviarMensaje(new AgentID("Cerastes"), json, null, ACLMessage.REQUEST, conversationID, null);
-                    while (mensajesServidor.isEmpty()){}
-                        inbox = mensajesServidor.Pop(); 
-                    if (inbox.getPerformativeInt() != ACLMessage.INFORM){
-                        //exit()
-                    }
+            }
+        } else if (tamanoRadar <= 25){
+            for (int i=0; i<5; i++){
+                for (int j=0; j<5; j++){
+                    int dif_x = (2-i)*(-1);
+                    int dif_y = (2-j)*(-1);
+                    radarPosiciones.add(new Pair(x+dif_x,y+dif_y));
                 }
-                    
+            }
+        } else if (tamanoRadar <= 121){
+            for (int i=0; i<11; i++){
+                for (int j=0; j<11; j++){
+                    int dif_x = (5-i)*(-1);
+                    int dif_y = (5-j)*(-1);
+                    radarPosiciones.add(new Pair(x+dif_x,y+dif_y));
+                }
+            }            
         }
         
-        
+        return (radarPosiciones.get(posicion));
     }
+    
     // previamente a esto, vamos 
-    public void Comportamiento(){
+    //public void Comportamiento(){
         // pedimos percepcion y la recibimos
+        
         
         // comprobamos percepcion para ver si alguien en radar, le mandamos mensaje
         // if (){} // alguien nos ha visto pero nosotros no a el y nos manda un mensaje, llamamos trafico
@@ -311,7 +363,7 @@ public class Coches extends SuperAgent {
         
         
         
-    }
+    //}
     
     /**
      * @author Adrian Martin Jaimez 
@@ -499,131 +551,244 @@ public class Coches extends SuperAgent {
      * @author Fernando Ruiz Hernández
      * 
      */
-    public void irObjetivo(JsonObject percepcionJson){
-        boolean salir = false;
-        
-        while (!salir){
-            
-            // *** Comprobar si tiene que hacer refuel
-            if(bateria <= 1.0){
-                //refuel();
-            }else if (percepcionJson.get("radar").asArray().get(12).asInt() != 2){
-                // Coordenadas de posición
-                x = percepcionJson.get("gps").asObject().get("x").asInt();
-                y = percepcionJson.get("gps").asObject().get("y").asInt();
-                
-                // Algoritmo de cálculo de movimiento
-                int minimo = Integer.MAX_VALUE;
-                
-                TreeMap<Float,String> casillas = new TreeMap<Float,String>();
-                
-                // Calculamos mínimo
-                if (percepcionJson.get("radar").asArray().get(6).asInt() != 1){
-                    if(minimo >= this.getValorPasos(x, y,6)){
-                        minimo = this.getValorPasos(x, y,6);
-                    }
+    public String irObjetivo(JsonObject percepcionJson){
+        // Coordenadas de posición
+        x = percepcionJson.get("gps").asObject().get("x").asInt();
+        y = percepcionJson.get("gps").asObject().get("y").asInt();
+
+        // Algoritmo de cálculo de movimiento
+        int minimo = Integer.MAX_VALUE;
+
+        TreeMap<Float,String> casillas = new TreeMap<Float,String>();
+
+        if (puedoVolar){
+            // Calculamos mínimo
+            if (valoRadar(percepcionJson.get("radar").asArray(), 6) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 6) != 4){
+                if(minimo >= this.getValorPasos(x, y,6)){
+                    minimo = this.getValorPasos(x, y,6);
                 }
-                if (percepcionJson.get("radar").asArray().get(7).asInt() != 1){
-                    if(minimo >= this.getValorPasos(x, y, 7)){
-                        minimo = this.getValorPasos(x, y, 7);
-                    }
+            }
+            if (valoRadar(percepcionJson.get("radar").asArray(), 7) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 7) != 4){
+                if(minimo >= this.getValorPasos(x, y, 7)){
+                    minimo = this.getValorPasos(x, y, 7);
                 }
-                if (percepcionJson.get("radar").asArray().get(8).asInt() != 1){
-                    if(minimo >= this.getValorPasos(x, y, 8)){
-                        minimo = this.getValorPasos(x, y, 8);
-                    }
+            }
+            if (valoRadar(percepcionJson.get("radar").asArray(), 8) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 8) != 4){
+                if(minimo >= this.getValorPasos(x, y, 8)){
+                    minimo = this.getValorPasos(x, y, 8);
                 }
-                if (percepcionJson.get("radar").asArray().get(11).asInt() != 1){
-                    if(minimo >= this.getValorPasos(x, y, 11)){
-                        minimo = this.getValorPasos(x, y, 11);
-                    }
+            }
+            if (valoRadar(percepcionJson.get("radar").asArray(), 11) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 11) != 4){
+                if(minimo >= this.getValorPasos(x, y, 11)){
+                    minimo = this.getValorPasos(x, y, 11);
                 }
-                if (percepcionJson.get("radar").asArray().get(13).asInt() != 1){
-                    if(minimo >= this.getValorPasos(x, y, 13)){
-                        minimo = this.getValorPasos(x, y, 13); 
-                    }
+            }
+            if (valoRadar(percepcionJson.get("radar").asArray(), 13) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 13) != 4){
+                if(minimo >= this.getValorPasos(x, y, 13)){
+                    minimo = this.getValorPasos(x, y, 13); 
                 }
-                if (percepcionJson.get("radar").asArray().get(16).asInt() != 1){
-                    if(minimo >= this.getValorPasos(x, y, 16)){
-                        minimo = this.getValorPasos(x, y, 16);
-                    }
+            }
+            if (valoRadar(percepcionJson.get("radar").asArray(), 16) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 16) != 4){
+                if(minimo >= this.getValorPasos(x, y, 16)){
+                    minimo = this.getValorPasos(x, y, 16);
                 }
-                if (percepcionJson.get("radar").asArray().get(17).asInt() != 1){
-                    if(minimo >= this.getValorPasos(x, y, 17)){
-                        minimo = this.getValorPasos(x, y, 17);
-                    }
+            }
+            if (valoRadar(percepcionJson.get("radar").asArray(), 17) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 17) != 4){
+                if(minimo >= this.getValorPasos(x, y, 17)){
+                    minimo = this.getValorPasos(x, y, 17);
                 }
-                if (percepcionJson.get("radar").asArray().get(18).asInt() != 1){
-                    if(minimo >= this.getValorPasos(x, y, 18)){
-                        minimo = this.getValorPasos(x, y, 18);
-                    }
+            }
+            if (valoRadar(percepcionJson.get("radar").asArray(), 18) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 18) != 4){
+                if(minimo >= this.getValorPasos(x, y, 18)){
+                    minimo = this.getValorPasos(x, y, 18);
                 }
-                
-                // Añadir casillas
-                if (percepcionJson.get("radar").asArray().get(6).asInt() != 1){
-                    if(minimo >= this.getValorPasos(x, y,6)){
-                        casillas.put(getValorEscaner(x, y, 6), "NW");
-                    }
+            }
+
+            // Añadir casillas
+            if (valoRadar(percepcionJson.get("radar").asArray(), 6) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 6) != 4){
+                if(minimo >= this.getValorPasos(x, y,6)){
+                    casillas.put(getValorEscaner(x, y, 6), "NW");
                 }
-                if (percepcionJson.get("radar").asArray().get(7).asInt() != 1){
-                    if(minimo >= this.getValorPasos(x, y, 7)){
-                        casillas.put(getValorEscaner(x, y, 7), "N");
-                    }
+            }
+            if (valoRadar(percepcionJson.get("radar").asArray(), 7) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 7) != 4){
+                if(minimo >= this.getValorPasos(x, y, 7)){
+                    casillas.put(getValorEscaner(x, y, 7), "N");
                 }
-                if (percepcionJson.get("radar").asArray().get(8).asInt() != 1){
-                    if(minimo >= this.getValorPasos(x, y, 8)){
-                        casillas.put(getValorEscaner(x, y, 8), "NE");
-                    }
+            }
+            if (valoRadar(percepcionJson.get("radar").asArray(), 8) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 8) != 4){
+                if(minimo >= this.getValorPasos(x, y, 8)){
+                    casillas.put(getValorEscaner(x, y, 8), "NE");
                 }
-                if (percepcionJson.get("radar").asArray().get(11).asInt() != 1){
-                    if(minimo >= this.getValorPasos(x, y, 11)){
-                        casillas.put(getValorEscaner(x, y, 11), "W");
-                    }
+            }
+            if (valoRadar(percepcionJson.get("radar").asArray(), 11) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 11) != 4){
+                if(minimo >= this.getValorPasos(x, y, 11)){
+                    casillas.put(getValorEscaner(x, y, 11), "W");
                 }
-                if (percepcionJson.get("radar").asArray().get(13).asInt() != 1){
-                    if(minimo >= this.getValorPasos(x, y, 13)){
-                        casillas.put(getValorEscaner(x, y, 13), "E"); 
-                    }
+            }
+            if (valoRadar(percepcionJson.get("radar").asArray(), 13) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 13) != 4){
+                if(minimo >= this.getValorPasos(x, y, 13)){
+                    casillas.put(getValorEscaner(x, y, 13), "E"); 
                 }
-                if (percepcionJson.get("radar").asArray().get(16).asInt() != 1){
-                    if(minimo >= this.getValorPasos(x, y, 16)){
-                        casillas.put(getValorEscaner(x, y, 16), "SW");
-                    }
+            }
+            if (valoRadar(percepcionJson.get("radar").asArray(), 16) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 16) != 4){
+                if(minimo >= this.getValorPasos(x, y, 16)){
+                    casillas.put(getValorEscaner(x, y, 16), "SW");
                 }
-                if (percepcionJson.get("radar").asArray().get(17).asInt() != 1){
-                    if(minimo >= this.getValorPasos(x, y, 17)){
-                        casillas.put(getValorEscaner(x, y, 17), "S");
-                    }
+            }
+            if (valoRadar(percepcionJson.get("radar").asArray(), 17) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 17) != 4){
+                if(minimo >= this.getValorPasos(x, y, 17)){
+                    casillas.put(getValorEscaner(x, y, 17), "S");
                 }
-                if (percepcionJson.get("radar").asArray().get(18).asInt() != 1){
-                    if(minimo >= this.getValorPasos(x, y, 18)){
-                        casillas.put(getValorEscaner(x, y, 18), "SE");
-                    }
+            }
+            if (valoRadar(percepcionJson.get("radar").asArray(), 18) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 18) != 4){
+                if(minimo >= this.getValorPasos(x, y, 18)){
+                    casillas.put(getValorEscaner(x, y, 18), "SE");
                 }
-                
-                Map.Entry<Float,String> casillaResultado = casillas.firstEntry();
-                
-                
-                //this.moverse("move"+casillaResultado.getValue());
-                
-                bateria--;
-            } else {
-                // logout
-                System.out.println("Hemos llegado al objetivo.");
-                salir = true;
-                //this.logout();
+            }            
+        } else {
+            // Calculamos mínimo
+            if (valoRadar(percepcionJson.get("radar").asArray(), 6) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 6) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 6) != 4){
+                if(minimo >= this.getValorPasos(x, y,6)){
+                    minimo = this.getValorPasos(x, y,6);
+                }
+            }
+            if (valoRadar(percepcionJson.get("radar").asArray(), 7) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 7) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 7) != 4){
+                if(minimo >= this.getValorPasos(x, y, 7)){
+                    minimo = this.getValorPasos(x, y, 7);
+                }
+            }
+            if (valoRadar(percepcionJson.get("radar").asArray(), 8) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 8) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 8) != 4){
+                if(minimo >= this.getValorPasos(x, y, 8)){
+                    minimo = this.getValorPasos(x, y, 8);
+                }
+            }
+            if (valoRadar(percepcionJson.get("radar").asArray(), 11) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 11) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 11) != 4){
+                if(minimo >= this.getValorPasos(x, y, 11)){
+                    minimo = this.getValorPasos(x, y, 11);
+                }
+            }
+            if (valoRadar(percepcionJson.get("radar").asArray(), 13) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 13) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 13) != 4){
+                if(minimo >= this.getValorPasos(x, y, 13)){
+                    minimo = this.getValorPasos(x, y, 13); 
+                }
+            }
+            if (valoRadar(percepcionJson.get("radar").asArray(), 16) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 16) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 16) != 4){
+                if(minimo >= this.getValorPasos(x, y, 16)){
+                    minimo = this.getValorPasos(x, y, 16);
+                }
+            }
+            if (valoRadar(percepcionJson.get("radar").asArray(), 17) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 17) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 17) != 4){
+                if(minimo >= this.getValorPasos(x, y, 17)){
+                    minimo = this.getValorPasos(x, y, 17);
+                }
+            }
+            if (valoRadar(percepcionJson.get("radar").asArray(), 18) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 18) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 18) != 4){
+                if(minimo >= this.getValorPasos(x, y, 18)){
+                    minimo = this.getValorPasos(x, y, 18);
+                }
+            }
+
+            // Añadir casillas
+            if (valoRadar(percepcionJson.get("radar").asArray(), 6) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 6) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 6) != 4){
+                if(minimo >= this.getValorPasos(x, y,6)){
+                    casillas.put(getValorEscaner(x, y, 6), "NW");
+                }
+            }
+            if (valoRadar(percepcionJson.get("radar").asArray(), 7) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 7) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 7) != 4){
+                if(minimo >= this.getValorPasos(x, y, 7)){
+                    casillas.put(getValorEscaner(x, y, 7), "N");
+                }
+            }
+            if (valoRadar(percepcionJson.get("radar").asArray(), 8) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 8) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 8) != 4){
+                if(minimo >= this.getValorPasos(x, y, 8)){
+                    casillas.put(getValorEscaner(x, y, 8), "NE");
+                }
+            }
+            if (valoRadar(percepcionJson.get("radar").asArray(), 11) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 11) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 11) != 4){
+                if(minimo >= this.getValorPasos(x, y, 11)){
+                    casillas.put(getValorEscaner(x, y, 11), "W");
+                }
+            }
+            if (valoRadar(percepcionJson.get("radar").asArray(), 13) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 13) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 13) != 4){
+                if(minimo >= this.getValorPasos(x, y, 13)){
+                    casillas.put(getValorEscaner(x, y, 13), "E"); 
+                }
+            }
+            if (valoRadar(percepcionJson.get("radar").asArray(), 16) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 16) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 16) != 4){
+                if(minimo >= this.getValorPasos(x, y, 16)){
+                    casillas.put(getValorEscaner(x, y, 16), "SW");
+                }
+            }
+            if (valoRadar(percepcionJson.get("radar").asArray(), 17) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 17) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 17) != 4){
+                if(minimo >= this.getValorPasos(x, y, 17)){
+                    casillas.put(getValorEscaner(x, y, 17), "S");
+                }
+            }
+            if (valoRadar(percepcionJson.get("radar").asArray(), 18) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 18) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 18) != 4){
+                if(minimo >= this.getValorPasos(x, y, 18)){
+                    casillas.put(getValorEscaner(x, y, 18), "SE");
+                }
             }
         }
+
+        Map.Entry<Float,String> casillaResultado = casillas.firstEntry();
+                
+        return ("move"+casillaResultado.getValue());        
     }
-    
+
     /**
     *
+    * Le pasamos la posicion del radar que queremos suponiendo que el radar es 5x5 y sea una casilla que rodeé
+    * a nuestro coche
+    * 
     * @author Manuel Ros Rodríguez
-    * @author Adrian Martin Jaimez
     */    
-    public void calcularTamanoMapa(){
-        // Esta parte es el mismo bucle que tiene que hacer adrian, cuando lo haga lo pegamos aqui y ya, por eso le pongo de author
-        // Nos movemos siempre para abajo, hasta encontrar una pared limite
+    public int valoRadar(JsonArray radar, int posicion){
+        int valorCasilla = -1;
+        
+        int tamanoRadar = radar.size();
+        
+        if (tamanoRadar <= 9){
+            if (posicion == 6){
+                valorCasilla = radar.asArray().get(0).asInt();
+            } else if (posicion == 7){
+                valorCasilla = radar.asArray().get(1).asInt();
+            } else if (posicion == 8){
+                valorCasilla = radar.asArray().get(2).asInt();
+            } else if (posicion == 11){
+                valorCasilla = radar.asArray().get(3).asInt();
+            } else if (posicion == 13){
+                valorCasilla = radar.asArray().get(5).asInt();
+            } else if (posicion == 16){
+                valorCasilla = radar.asArray().get(6).asInt();
+            } else if (posicion == 17){
+                valorCasilla = radar.asArray().get(7).asInt();
+            } else if (posicion == 18){
+                valorCasilla = radar.asArray().get(8).asInt();
+            }
+        } else if (tamanoRadar <= 25){
+            valorCasilla = radar.asArray().get(posicion).asInt();
+        } else if (tamanoRadar <= 121){
+            if (posicion == 6){
+                valorCasilla = radar.asArray().get(48).asInt();
+            } else if (posicion == 7){
+                valorCasilla = radar.asArray().get(49).asInt();
+            } else if (posicion == 8){
+                valorCasilla = radar.asArray().get(50).asInt();
+            } else if (posicion == 11){
+                valorCasilla = radar.asArray().get(59).asInt();
+            } else if (posicion == 13){
+                valorCasilla = radar.asArray().get(61).asInt();
+            } else if (posicion == 16){
+                valorCasilla = radar.asArray().get(70).asInt();
+            } else if (posicion == 17){
+                valorCasilla = radar.asArray().get(71).asInt();
+            } else if (posicion == 18){
+                valorCasilla = radar.asArray().get(72).asInt();
+            }         
+        }
+        
+        return (valorCasilla);
     }
     
     /**

@@ -84,6 +84,8 @@ public class Coordinador extends SuperAgent {
         try {
             this.login();
             System.out.print("ejecutado");
+            this.comportamiento();
+            this.logout();
         } catch (InterruptedException e){
             System.out.println("Error al sacar mensaje de la cola");
         }
@@ -162,7 +164,26 @@ public class Coordinador extends SuperAgent {
                     Json.parse(inbox3.getContent()).asObject().get("capabilities").asObject().get("fuelrate").asInt() == 4 || Json.parse(inbox4.getContent()).asObject().get("capabilities").asObject().get("fuelrate").asInt() == 4)
                 camion = true;
 
-            if (!volador.isEmpty() && camion){
+            
+            // Vamos a comprobar si algún coche ha aparecido abajo del todo y si lo ha hecho tendremos el tamaño del mapa
+            if (Json.parse(inbox.getContent()).asObject().get("x").asInt() > 30)
+                tamanoMapa = Json.parse(inbox.getContent()).asObject().get("x").asInt();
+            else if (Json.parse(inbox2.getContent()).asObject().get("x").asInt() > 30)
+                tamanoMapa = Json.parse(inbox2.getContent()).asObject().get("x").asInt();
+            else if (Json.parse(inbox3.getContent()).asObject().get("x").asInt() > 30)
+                tamanoMapa = Json.parse(inbox3.getContent()).asObject().get("x").asInt();
+            else if (Json.parse(inbox4.getContent()).asObject().get("x").asInt() > 30)
+                tamanoMapa = Json.parse(inbox4.getContent()).asObject().get("x").asInt();
+
+            // Redondeamos por las paredes limites del mapa
+            if (tamanoMapa != 0 && tamanoMapa < 100)
+                tamanoMapa = 100;
+            if (tamanoMapa != 0 && tamanoMapa > 100 && tamanoMapa < 150)
+                tamanoMapa = 150;
+            if (tamanoMapa != 0 && tamanoMapa > 150 && tamanoMapa < 500)
+                tamanoMapa = 500;       
+            
+            if (!volador.isEmpty() && camion && tamanoMapa != 0){
                 // Hemos conseguido lo que queríamos y podemos dejar de hacer subscribe
                 salirSubscribe = true;
             } else {
@@ -178,33 +199,6 @@ public class Coordinador extends SuperAgent {
                 
                 inbox = this.recibirMensaje(mensajesServidor);   
             }
-        }
-        
-        // Vamos a comprobar si algún coche ha aparecido abajo del todo y si lo ha hecho tendremos el tamaño del mapa
-        if (Json.parse(inbox.getContent()).asObject().get("x").asInt() > 30)
-            tamanoMapa = Json.parse(inbox.getContent()).asObject().get("x").asInt();
-        else if (Json.parse(inbox2.getContent()).asObject().get("x").asInt() > 30)
-            tamanoMapa = Json.parse(inbox.getContent()).asObject().get("x").asInt();
-        else if (Json.parse(inbox3.getContent()).asObject().get("x").asInt() > 30)
-            tamanoMapa = Json.parse(inbox.getContent()).asObject().get("x").asInt();
-        else if (Json.parse(inbox4.getContent()).asObject().get("x").asInt() > 30)
-            tamanoMapa = Json.parse(inbox.getContent()).asObject().get("x").asInt();
-        
-        // Redondeamos por las paredes limites del mapa
-        if (tamanoMapa != 0 && tamanoMapa < 100)
-            tamanoMapa = 100;
-        if (tamanoMapa != 0 && tamanoMapa > 100 && tamanoMapa < 300)
-            tamanoMapa = 300;
-        if (tamanoMapa != 0 && tamanoMapa > 300 && tamanoMapa < 500)
-            tamanoMapa = 500;
-        
-        if (tamanoMapa == 0){
-           // No tenemos el tamaño del mapa, vamos a pedirle al volador que compruebe el tamaño
-            this.enviarMensaje(new AgentID(volador), null, "calcularTamanoMapa", ACLMessage.REQUEST, null, volador); 
-            
-            ACLMessage otroInbox = this.recibirMensaje(mensajesCoches);
-
-            tamanoMapa = Json.parse(otroInbox.getContent()).asObject().get("tamanoMapa").asInt();
         }
         
         // Como tenemos el tamaño del mapa, vamos a realizar el reparto de cuadrantes
@@ -243,11 +237,8 @@ public class Coordinador extends SuperAgent {
 
         // Recibimos confirmaciones de los coches
         inbox = this.recibirMensaje(mensajesCoches);
-
         inbox = this.recibirMensaje(mensajesCoches);
-
         inbox = this.recibirMensaje(mensajesCoches);
-
         inbox = this.recibirMensaje(mensajesCoches);
     }
     
@@ -344,6 +335,51 @@ public class Coordinador extends SuperAgent {
         }
         
         return (asignacion);
+    }
+    
+    /**
+    *
+    * Método principal del coordinador, donde se espera a que los coches le vayan informando si han encontrado el objetivo,
+    * si han llegado a él o si se han quedado sin combustible
+    * 
+    * @author Manuel Ros Rodríguez
+    */    
+    public void comportamiento() throws InterruptedException{
+        boolean salir = false;
+        int contador = 0;
+        
+        while (!salir){
+            ACLMessage inbox = this.recibirMensaje(mensajesCoches);
+            JsonObject json = null;
+            
+            if (inbox.getContent().contains("objetivoEncontrado")){
+                // Hemos encontrado el objetivo, avisemos a todos menos al coche que ya lo sabe
+                json = Json.parse(inbox.getContent()).asObject();
+                
+                // Coche 1
+                if (!inbox.getSender().toString().contains(nombreCoche1))
+                    this.enviarMensaje(new AgentID(nombreCoche1), json, null, ACLMessage.REQUEST, null, nombreCoche1); 
+
+                // Coche 2
+                if (!inbox.getSender().toString().contains(nombreCoche2))
+                    this.enviarMensaje(new AgentID(nombreCoche2), json, null, ACLMessage.REQUEST, null, nombreCoche2);  
+
+                // Coche 3
+                if (!inbox.getSender().toString().contains(nombreCoche3))
+                    this.enviarMensaje(new AgentID(nombreCoche3), json, null, ACLMessage.REQUEST, null, nombreCoche3); 
+
+                // Coche 4
+                if (!inbox.getSender().toString().contains(nombreCoche4))
+                    this.enviarMensaje(new AgentID(nombreCoche4), json, null, ACLMessage.REQUEST, null, nombreCoche4);      
+            } else if (inbox.getContent().contains("heTerminado")){
+                contador++;
+            }
+        
+            // Todos los coches han terminado, salimos del bucle
+            if (contador == 4)
+                salir = true;
+        }
+        // En el método logout, que es el que viene a continuación en el método execute(), se mandarán los CANCEL
     }
     
     /**
