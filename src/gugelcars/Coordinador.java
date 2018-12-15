@@ -358,19 +358,19 @@ public class Coordinador extends SuperAgent {
                 
                 // Coche 1
                 if (!inbox.getSender().toString().contains(nombreCoche1))
-                    this.enviarMensaje(new AgentID(nombreCoche1), json, null, ACLMessage.REQUEST, null, nombreCoche1); 
+                    this.enviarMensaje(new AgentID(nombreCoche1), json, null, ACLMessage.INFORM, null, nombreCoche1); 
 
                 // Coche 2
                 if (!inbox.getSender().toString().contains(nombreCoche2))
-                    this.enviarMensaje(new AgentID(nombreCoche2), json, null, ACLMessage.REQUEST, null, nombreCoche2);  
+                    this.enviarMensaje(new AgentID(nombreCoche2), json, null, ACLMessage.INFORM, null, nombreCoche2);  
 
                 // Coche 3
                 if (!inbox.getSender().toString().contains(nombreCoche3))
-                    this.enviarMensaje(new AgentID(nombreCoche3), json, null, ACLMessage.REQUEST, null, nombreCoche3); 
+                    this.enviarMensaje(new AgentID(nombreCoche3), json, null, ACLMessage.INFORM, null, nombreCoche3); 
 
                 // Coche 4
                 if (!inbox.getSender().toString().contains(nombreCoche4))
-                    this.enviarMensaje(new AgentID(nombreCoche4), json, null, ACLMessage.REQUEST, null, nombreCoche4);      
+                    this.enviarMensaje(new AgentID(nombreCoche4), json, null, ACLMessage.INFORM, null, nombreCoche4);      
             } else if (inbox.getContent().contains("heTerminado")){
                 contador++;
             }

@@ -46,6 +46,8 @@ public class Coches extends SuperAgent {
     private boolean escanerObjetivoCreado = false;
     private int x;
     private int y;
+    private int xObjetivo;
+    private int yObjetivo;
     private ArrayList<ArrayList<Integer>> mapaPasos = new ArrayList<>();
     private ArrayList<ArrayList<Float>> mapaEscaner = new ArrayList<>();
     
@@ -191,13 +193,24 @@ public class Coches extends SuperAgent {
             inbox = this.recibirMensaje(mensajesServidor);
             JsonObject percepcionJson = Json.parse(inbox.getContent()).asObject();
             
+            // Actualizamos nuestra posición
+            x = percepcionJson.get("gps").asObject().get("x").asInt();
+            y = percepcionJson.get("gps").asObject().get("y").asInt();
+            
             /*
             trafico
             */
             
-            // Actualizamos nuestra posición
-            x = percepcionJson.get("gps").asObject().get("x").asInt();
-            y = percepcionJson.get("gps").asObject().get("y").asInt();
+            // Si el coordinador nos manda un mensaje es porque alguien ha encontrado el objetivo
+            if (!mensajesCoordinador.isEmpty()){
+                inbox = mensajesCoordinador.Pop();
+                xObjetivo = Json.parse(inbox.getContent()).asObject().get("objetivoEncontrado").asObject().get("x").asInt();
+                yObjetivo = Json.parse(inbox.getContent()).asObject().get("objetivoEncontrado").asObject().get("y").asInt();
+                
+                if (irCuadrante)
+                    irCuadrante = false;
+                objetivoEncontrado = true;
+            }
             
             // Comprobamos si hemos llegado al cuadrante
             if (cuadrante == 1 && x > 0 && x < tamanoMapa/2 && y > 0 && y < tamanoMapa/2){
@@ -239,11 +252,16 @@ public class Coches extends SuperAgent {
                 json = new JsonObject();
                 JsonObject jsonCoordenadas = new JsonObject();
                 Pair<Integer,Integer> coordenadas = this.coordenadasCasillaRadar(radar.size(), posicionRadar);
-                jsonCoordenadas.add("x",coordenadas.getKey());
-                jsonCoordenadas.add("y",coordenadas.getValue());
+                xObjetivo = coordenadas.getKey();
+                yObjetivo = coordenadas.getValue();
+                jsonCoordenadas.add("x",xObjetivo);
+                jsonCoordenadas.add("y",yObjetivo);
                 json.add("objetivoEncontrado",jsonCoordenadas);
                 
                 this.enviarMensaje(new AgentID(nombreCoordinador), json, null, ACLMessage.INFORM, null, null); // CHECK**
+                
+                if (irCuadrante)
+                    irCuadrante = false;
             }
             
             // Comprobamos en que modo estamos y nos movemos
@@ -256,7 +274,6 @@ public class Coches extends SuperAgent {
             } else {
                 String movimiento;
                 
-                // * falta comprobar si fuera del cuadrante
                 if (irCuadrante){
                     if (!escanerCuadranteCreado)
                         this.construirEscanerCuadrante(tamanoMapa); // *size de esto?
@@ -563,168 +580,168 @@ public class Coches extends SuperAgent {
 
         if (puedoVolar){
             // Calculamos mínimo
-            if (valoRadar(percepcionJson.get("radar").asArray(), 6) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 6) != 4){
+            if (valoRadar(percepcionJson.get("radar").asArray(), 6) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 6) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
                 if(minimo >= this.getValorPasos(x, y,6)){
                     minimo = this.getValorPasos(x, y,6);
                 }
             }
-            if (valoRadar(percepcionJson.get("radar").asArray(), 7) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 7) != 4){
+            if (valoRadar(percepcionJson.get("radar").asArray(), 7) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 7) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
                 if(minimo >= this.getValorPasos(x, y, 7)){
                     minimo = this.getValorPasos(x, y, 7);
                 }
             }
-            if (valoRadar(percepcionJson.get("radar").asArray(), 8) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 8) != 4){
+            if (valoRadar(percepcionJson.get("radar").asArray(), 8) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 8) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
                 if(minimo >= this.getValorPasos(x, y, 8)){
                     minimo = this.getValorPasos(x, y, 8);
                 }
             }
-            if (valoRadar(percepcionJson.get("radar").asArray(), 11) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 11) != 4){
+            if (valoRadar(percepcionJson.get("radar").asArray(), 11) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 11) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
                 if(minimo >= this.getValorPasos(x, y, 11)){
                     minimo = this.getValorPasos(x, y, 11);
                 }
             }
-            if (valoRadar(percepcionJson.get("radar").asArray(), 13) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 13) != 4){
+            if (valoRadar(percepcionJson.get("radar").asArray(), 13) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 13) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
                 if(minimo >= this.getValorPasos(x, y, 13)){
                     minimo = this.getValorPasos(x, y, 13); 
                 }
             }
-            if (valoRadar(percepcionJson.get("radar").asArray(), 16) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 16) != 4){
+            if (valoRadar(percepcionJson.get("radar").asArray(), 16) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 16) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
                 if(minimo >= this.getValorPasos(x, y, 16)){
                     minimo = this.getValorPasos(x, y, 16);
                 }
             }
-            if (valoRadar(percepcionJson.get("radar").asArray(), 17) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 17) != 4){
+            if (valoRadar(percepcionJson.get("radar").asArray(), 17) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 17) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
                 if(minimo >= this.getValorPasos(x, y, 17)){
                     minimo = this.getValorPasos(x, y, 17);
                 }
             }
-            if (valoRadar(percepcionJson.get("radar").asArray(), 18) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 18) != 4){
+            if (valoRadar(percepcionJson.get("radar").asArray(), 18) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 18) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
                 if(minimo >= this.getValorPasos(x, y, 18)){
                     minimo = this.getValorPasos(x, y, 18);
                 }
             }
 
             // Añadir casillas
-            if (valoRadar(percepcionJson.get("radar").asArray(), 6) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 6) != 4){
+            if (valoRadar(percepcionJson.get("radar").asArray(), 6) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 6) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
                 if(minimo >= this.getValorPasos(x, y,6)){
                     casillas.put(getValorEscaner(x, y, 6), "NW");
                 }
             }
-            if (valoRadar(percepcionJson.get("radar").asArray(), 7) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 7) != 4){
+            if (valoRadar(percepcionJson.get("radar").asArray(), 7) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 7) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
                 if(minimo >= this.getValorPasos(x, y, 7)){
                     casillas.put(getValorEscaner(x, y, 7), "N");
                 }
             }
-            if (valoRadar(percepcionJson.get("radar").asArray(), 8) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 8) != 4){
+            if (valoRadar(percepcionJson.get("radar").asArray(), 8) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 8) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
                 if(minimo >= this.getValorPasos(x, y, 8)){
                     casillas.put(getValorEscaner(x, y, 8), "NE");
                 }
             }
-            if (valoRadar(percepcionJson.get("radar").asArray(), 11) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 11) != 4){
+            if (valoRadar(percepcionJson.get("radar").asArray(), 11) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 11) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
                 if(minimo >= this.getValorPasos(x, y, 11)){
                     casillas.put(getValorEscaner(x, y, 11), "W");
                 }
             }
-            if (valoRadar(percepcionJson.get("radar").asArray(), 13) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 13) != 4){
+            if (valoRadar(percepcionJson.get("radar").asArray(), 13) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 13) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
                 if(minimo >= this.getValorPasos(x, y, 13)){
                     casillas.put(getValorEscaner(x, y, 13), "E"); 
                 }
             }
-            if (valoRadar(percepcionJson.get("radar").asArray(), 16) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 16) != 4){
+            if (valoRadar(percepcionJson.get("radar").asArray(), 16) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 16) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
                 if(minimo >= this.getValorPasos(x, y, 16)){
                     casillas.put(getValorEscaner(x, y, 16), "SW");
                 }
             }
-            if (valoRadar(percepcionJson.get("radar").asArray(), 17) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 17) != 4){
+            if (valoRadar(percepcionJson.get("radar").asArray(), 17) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 17) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
                 if(minimo >= this.getValorPasos(x, y, 17)){
                     casillas.put(getValorEscaner(x, y, 17), "S");
                 }
             }
-            if (valoRadar(percepcionJson.get("radar").asArray(), 18) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 18) != 4){
+            if (valoRadar(percepcionJson.get("radar").asArray(), 18) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 18) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
                 if(minimo >= this.getValorPasos(x, y, 18)){
                     casillas.put(getValorEscaner(x, y, 18), "SE");
                 }
             }            
         } else {
             // Calculamos mínimo
-            if (valoRadar(percepcionJson.get("radar").asArray(), 6) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 6) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 6) != 4){
+            if (valoRadar(percepcionJson.get("radar").asArray(), 6) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 6) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 6) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
                 if(minimo >= this.getValorPasos(x, y,6)){
                     minimo = this.getValorPasos(x, y,6);
                 }
             }
-            if (valoRadar(percepcionJson.get("radar").asArray(), 7) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 7) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 7) != 4){
+            if (valoRadar(percepcionJson.get("radar").asArray(), 7) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 7) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 7) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
                 if(minimo >= this.getValorPasos(x, y, 7)){
                     minimo = this.getValorPasos(x, y, 7);
                 }
             }
-            if (valoRadar(percepcionJson.get("radar").asArray(), 8) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 8) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 8) != 4){
+            if (valoRadar(percepcionJson.get("radar").asArray(), 8) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 8) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 8) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
                 if(minimo >= this.getValorPasos(x, y, 8)){
                     minimo = this.getValorPasos(x, y, 8);
                 }
             }
-            if (valoRadar(percepcionJson.get("radar").asArray(), 11) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 11) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 11) != 4){
+            if (valoRadar(percepcionJson.get("radar").asArray(), 11) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 11) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 11) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
                 if(minimo >= this.getValorPasos(x, y, 11)){
                     minimo = this.getValorPasos(x, y, 11);
                 }
             }
-            if (valoRadar(percepcionJson.get("radar").asArray(), 13) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 13) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 13) != 4){
+            if (valoRadar(percepcionJson.get("radar").asArray(), 13) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 13) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 13) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
                 if(minimo >= this.getValorPasos(x, y, 13)){
                     minimo = this.getValorPasos(x, y, 13); 
                 }
             }
-            if (valoRadar(percepcionJson.get("radar").asArray(), 16) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 16) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 16) != 4){
+            if (valoRadar(percepcionJson.get("radar").asArray(), 16) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 16) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 16) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
                 if(minimo >= this.getValorPasos(x, y, 16)){
                     minimo = this.getValorPasos(x, y, 16);
                 }
             }
-            if (valoRadar(percepcionJson.get("radar").asArray(), 17) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 17) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 17) != 4){
+            if (valoRadar(percepcionJson.get("radar").asArray(), 17) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 17) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 17) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
                 if(minimo >= this.getValorPasos(x, y, 17)){
                     minimo = this.getValorPasos(x, y, 17);
                 }
             }
-            if (valoRadar(percepcionJson.get("radar").asArray(), 18) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 18) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 18) != 4){
+            if (valoRadar(percepcionJson.get("radar").asArray(), 18) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 18) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 18) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
                 if(minimo >= this.getValorPasos(x, y, 18)){
                     minimo = this.getValorPasos(x, y, 18);
                 }
             }
 
             // Añadir casillas
-            if (valoRadar(percepcionJson.get("radar").asArray(), 6) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 6) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 6) != 4){
+            if (valoRadar(percepcionJson.get("radar").asArray(), 6) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 6) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 6) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
                 if(minimo >= this.getValorPasos(x, y,6)){
                     casillas.put(getValorEscaner(x, y, 6), "NW");
                 }
             }
-            if (valoRadar(percepcionJson.get("radar").asArray(), 7) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 7) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 7) != 4){
+            if (valoRadar(percepcionJson.get("radar").asArray(), 7) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 7) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 7) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
                 if(minimo >= this.getValorPasos(x, y, 7)){
                     casillas.put(getValorEscaner(x, y, 7), "N");
                 }
             }
-            if (valoRadar(percepcionJson.get("radar").asArray(), 8) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 8) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 8) != 4){
+            if (valoRadar(percepcionJson.get("radar").asArray(), 8) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 8) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 8) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
                 if(minimo >= this.getValorPasos(x, y, 8)){
                     casillas.put(getValorEscaner(x, y, 8), "NE");
                 }
             }
-            if (valoRadar(percepcionJson.get("radar").asArray(), 11) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 11) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 11) != 4){
+            if (valoRadar(percepcionJson.get("radar").asArray(), 11) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 11) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 11) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
                 if(minimo >= this.getValorPasos(x, y, 11)){
                     casillas.put(getValorEscaner(x, y, 11), "W");
                 }
             }
-            if (valoRadar(percepcionJson.get("radar").asArray(), 13) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 13) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 13) != 4){
+            if (valoRadar(percepcionJson.get("radar").asArray(), 13) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 13) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 13) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
                 if(minimo >= this.getValorPasos(x, y, 13)){
                     casillas.put(getValorEscaner(x, y, 13), "E"); 
                 }
             }
-            if (valoRadar(percepcionJson.get("radar").asArray(), 16) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 16) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 16) != 4){
+            if (valoRadar(percepcionJson.get("radar").asArray(), 16) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 16) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 16) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
                 if(minimo >= this.getValorPasos(x, y, 16)){
                     casillas.put(getValorEscaner(x, y, 16), "SW");
                 }
             }
-            if (valoRadar(percepcionJson.get("radar").asArray(), 17) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 17) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 17) != 4){
+            if (valoRadar(percepcionJson.get("radar").asArray(), 17) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 17) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 17) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
                 if(minimo >= this.getValorPasos(x, y, 17)){
                     casillas.put(getValorEscaner(x, y, 17), "S");
                 }
             }
-            if (valoRadar(percepcionJson.get("radar").asArray(), 18) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 18) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 18) != 4){
+            if (valoRadar(percepcionJson.get("radar").asArray(), 18) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 18) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 18) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
                 if(minimo >= this.getValorPasos(x, y, 18)){
                     casillas.put(getValorEscaner(x, y, 18), "SE");
                 }
@@ -734,6 +751,28 @@ public class Coches extends SuperAgent {
         Map.Entry<Float,String> casillaResultado = casillas.firstEntry();
                 
         return ("move"+casillaResultado.getValue());        
+    }
+    
+     /**
+     * 
+     * @author Manuel Ros Rodríguez
+     * 
+     */  
+    public boolean comprobarSiCasillaFueraCuadrante(JsonArray radar, int posicion){
+        boolean fuera = true;
+        
+        Pair<Integer,Integer> coordenadas = this.coordenadasCasillaRadar(radar.size(), posicion);
+        
+        if (cuadrante == 1 && coordenadas.getKey() > 0 && coordenadas.getKey() < tamanoMapa/2 && coordenadas.getValue() > 0 && coordenadas.getValue() < tamanoMapa/2)
+            fuera = false;
+        else if (cuadrante == 2 && coordenadas.getKey() > 0 && coordenadas.getKey() < tamanoMapa/2 && coordenadas.getValue() > tamanoMapa/2 && coordenadas.getValue() < tamanoMapa)
+            fuera = false;
+        else if (cuadrante == 3 && coordenadas.getKey() > tamanoMapa/2 && coordenadas.getKey() < tamanoMapa && coordenadas.getValue() > 0 && coordenadas.getValue() < tamanoMapa/2)
+            fuera = false;
+        else if (cuadrante == 4 && coordenadas.getKey() > tamanoMapa/2 && coordenadas.getKey() < tamanoMapa && coordenadas.getValue() > tamanoMapa/2 && coordenadas.getValue() < tamanoMapa)
+            fuera = false;
+        
+        return (fuera);
     }
 
     /**
