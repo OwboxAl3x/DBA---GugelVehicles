@@ -279,7 +279,7 @@ public class Coches extends SuperAgent {
                         this.construirEscanerCuadrante(tamanoMapa); // *size de esto?
                     movimiento = this.irObjetivo(percepcionJson);
                 } else if (!objetivoEncontrado){                  
-                    movimiento = this.explorar();
+                    movimiento = this.explorar(percepcionJson);
                 } else {
                     if (!escanerObjetivoCreado)
                         this.construirEscanerObjetivo(tamanoMapa); // *size de esto?  
