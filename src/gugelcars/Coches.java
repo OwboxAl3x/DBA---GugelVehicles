@@ -382,6 +382,64 @@ public class Coches extends SuperAgent {
         
     //}
     
+    public void trafico(TreeMap<Float,String> casillas, int tamanoRadar) throws InterruptedException{
+        boolean salir = false;
+        while (!salir){
+            Map.Entry<Float,String> casillaResultado = casillas.firstEntry();
+            String puntoCardinal = casillaResultado.getValue();
+
+            int posicion = this.dePCardinalACasilla(puntoCardinal);
+            Pair<Integer,Integer> coordenadas = this.coordenadasCasillaRadar(tamanoRadar, posicion);
+
+            // Le preguntamos al coordinador si podemos movernos a esa posición
+            JsonObject json = new JsonObject();
+            JsonObject jsonInterno = new JsonObject();
+            jsonInterno.add("x",coordenadas.getKey());
+            jsonInterno.add("y",coordenadas.getValue());
+            jsonInterno.add("opciones",casillas.size());
+            json.add("puedoMoverme",jsonInterno);
+            this.enviarMensaje(new AgentID(nombreCoordinador), json, null, ACLMessage.QUERY_IF, null, null);
+
+            ACLMessage inbox = this.recibirMensaje(mensajesCoordinador);
+            
+            // Nos permite hacer el movimiento
+            if (Json.parse(inbox.getContent()).asObject().get("result").asString() == "si")
+                salir = true;
+        }
+    }
+    
+    public int dePCardinalACasilla(String puntoCardinal){
+        int resultado = -1;
+        switch (puntoCardinal){
+            case "NW":
+                resultado = 6;
+                break;
+            case "N":
+                resultado = 7;
+                break;
+            case "NE":
+                resultado = 8;
+                break;
+            case "W":
+                resultado = 11;
+                break;
+            case "E":
+                resultado = 13;
+                break;
+            case "SW":
+                resultado = 16;
+                break;
+            case "S":
+                resultado = 17;
+                break;
+            case "SE":
+                resultado = 18;
+                break;  
+        }
+        
+        return (resultado);
+    }
+    
     /**
      * @author Adrian Martin Jaimez 
      * 
@@ -389,7 +447,7 @@ public class Coches extends SuperAgent {
     // pasivo o activo 
     // esperamos su mensaje si activo lo mandamos si pasivo
     // hasta crisis resuelta, si no seguimos aqui
-    public void trafico(int tipo) throws InterruptedException{
+    /*public void trafico(int tipo) throws InterruptedException{
         ACLMessage inbox = null;
         JsonObject json;
         int suPrioridad=0;
@@ -410,7 +468,7 @@ public class Coches extends SuperAgent {
         }else{
             //no me muevo
         }
-    }
+    }*/
     
     /**
      * Obtiene el valor del escaner de una casilla

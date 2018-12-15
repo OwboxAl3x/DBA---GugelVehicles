@@ -346,7 +346,8 @@ public class Coordinador extends SuperAgent {
     */    
     public void comportamiento() throws InterruptedException{
         boolean salir = false;
-        int contador = 0;
+        int contadorTerminados = 0;
+        int contadorMovimiento = 0;
         
         while (!salir){
             ACLMessage inbox = this.recibirMensaje(mensajesCoches);
@@ -372,11 +373,21 @@ public class Coordinador extends SuperAgent {
                 if (!inbox.getSender().toString().contains(nombreCoche4))
                     this.enviarMensaje(new AgentID(nombreCoche4), json, null, ACLMessage.INFORM, null, nombreCoche4);      
             } else if (inbox.getContent().contains("heTerminado")){
-                contador++;
+                contadorTerminados++;
+            } else if (inbox.getContent().contains("heTerminado")){
+                contadorMovimiento++;
             }
         
+            if (contadorMovimiento == 4) {
+                
+            }
+            
+            if (contadorMovimiento != 0 && contadorTerminados != 0){
+                
+            }
+            
             // Todos los coches han terminado, salimos del bucle
-            if (contador == 4)
+            if (contadorTerminados == 4)
                 salir = true;
         }
         // En el método logout, que es el que viene a continuación en el método execute(), se mandarán los CANCEL
