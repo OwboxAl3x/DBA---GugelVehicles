@@ -309,9 +309,9 @@ public class Coches extends SuperAgent {
     public String explorar(JsonObject percepcionJson) throws InterruptedException{
         TreeMap<Float,String> casillas = new TreeMap<Float,String>();
         
-        //if (puedoVolar){
-            
-        //} else {
+        if (puedoVolar){
+            this.explorarVolar(percepcionJson);
+        } else {
             if (comprobarCasillaPermitida(percepcionJson, 6) && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
                 casillas.put((float) getValorPasos(x, y, 6), "NW");
             }
@@ -336,7 +336,7 @@ public class Coches extends SuperAgent {
             if (comprobarCasillaPermitida(percepcionJson, 18) && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 18)){
                 casillas.put((float) getValorPasos(x, y, 18), "SE");
             }         
-        //}
+        }
         
         String movimiento = this.trafico(casillas, percepcionJson.get("radar").asArray().size());
         
