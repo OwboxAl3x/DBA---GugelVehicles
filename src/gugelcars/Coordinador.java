@@ -354,7 +354,7 @@ public class Coordinador extends SuperAgent {
             ACLMessage inbox = this.recibirMensaje(mensajesCoches);
             JsonObject json = null;
             
-            System.out.print("Coordinador mensaje recibido: "+inbox.getContent());
+            System.out.println("Coordinador mensaje recibido: "+inbox.getContent());
             
             if (inbox.getContent().contains("objetivoEncontrado")){
                 // Hemos encontrado el objetivo, avisemos a todos menos al coche que ya lo sabe
@@ -427,12 +427,14 @@ public class Coordinador extends SuperAgent {
                             if (opcionesCoche >= opcionesOtroCoche){
                                 json = new JsonObject();
                                 json.add("result","no");
+                                System.out.println(json.toString());
                                 this.enviarMensaje(mensajesPuedoMoverme.get(i).getSender(), json, null, ACLMessage.INFORM, null, null);
                                 inbox = this.recibirMensaje(mensajesCoches);
                                 mensajesPuedoMoverme.set(i, inbox);
                             } else {
                                 json = new JsonObject();
                                 json.add("result","no");
+                                System.out.println(json.toString());
                                 this.enviarMensaje(mensajesPuedoMoverme.get(j).getSender(), json, null, ACLMessage.INFORM, null, null);
                                 inbox = this.recibirMensaje(mensajesCoches);
                                 mensajesPuedoMoverme.set(j, inbox);                                        
@@ -446,6 +448,7 @@ public class Coordinador extends SuperAgent {
         // Hemos salido del bucle, ya no hay conflictos, damos permiso para moverse a los coches
         json = new JsonObject();
         json.add("result","si");
+        System.out.println(json.toString());
         for (int i=0; i<mensajesPuedoMoverme.size(); i++){
             this.enviarMensaje(mensajesPuedoMoverme.get(i).getSender(), json, null, ACLMessage.INFORM, null, null);                    
         }

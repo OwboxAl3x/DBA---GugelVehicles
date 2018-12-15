@@ -275,7 +275,6 @@ public class Coches extends SuperAgent {
                     irCuadrante = false;
             }
             
-            System.out.println("asd1");
             // Comprobamos en que modo estamos y nos movemos
             if ((finRefuel && bateria <= 1) || valoRadar(percepcionJson.get("sensor").asArray(),12) == 2){
                 json = new JsonObject();
@@ -284,14 +283,11 @@ public class Coches extends SuperAgent {
                 
                 salir = true;
             } else {
-                System.out.println("asd2");
                 String movimiento;
                 
                 if (irCuadrante){
-                    System.out.println("asd3");
                     if (!escanerCuadranteCreado)
                         this.construirEscanerCuadrante(tamanoMapa); // *size de esto?
-                    System.out.println("asd4");
                     movimiento = this.irObjetivo(percepcionJson);
                 } else if (!objetivoEncontrado){                  
                     movimiento = this.explorar(percepcionJson);
@@ -301,6 +297,7 @@ public class Coches extends SuperAgent {
                     movimiento = this.irObjetivo(percepcionJson);
                 }
                 
+                System.out.println(movimiento); 
                 json = new JsonObject();
                 json.add("command",movimiento);
                 this.enviarMensaje(new AgentID("Cerastes"), json, null, ACLMessage.REQUEST, conversationID, replyWith);
@@ -436,6 +433,8 @@ public class Coches extends SuperAgent {
         
         while (!salir){
             Map.Entry<Float,String> casillaResultado = casillas.firstEntry();
+            casillas.remove(casillaResultado.getKey());
+            
             puntoCardinal = casillaResultado.getValue();
 
             int posicion = this.dePCardinalACasilla(puntoCardinal);
@@ -453,7 +452,7 @@ public class Coches extends SuperAgent {
             ACLMessage inbox = this.recibirMensaje(mensajesCoordinador);
             
             // Nos permite hacer el movimiento
-            if (Json.parse(inbox.getContent()).asObject().get("result").asString() == "si")
+            if (Json.parse(inbox.getContent()).asObject().get("result").asString().equals("si"))
                 salir = true;
         }
         
@@ -659,56 +658,48 @@ public class Coches extends SuperAgent {
 
         TreeMap<Float,String> casillas = new TreeMap<Float,String>();
 
-        System.out.println("asd5");
         // Calculamos mínimo
         if (comprobarCasillaPermitida(percepcionJson, 6)){
             if(minimo >= this.getValorPasos(x, y,6)){
                 minimo = this.getValorPasos(x, y,6);
             }
         }
-        System.out.println("asd6");
         if (comprobarCasillaPermitida(percepcionJson, 7)){
             if(minimo >= this.getValorPasos(x, y, 7)){
                 minimo = this.getValorPasos(x, y, 7);
             }
         }
-        System.out.println("asd7");
         if (comprobarCasillaPermitida(percepcionJson, 8)){
             if(minimo >= this.getValorPasos(x, y, 8)){
                 minimo = this.getValorPasos(x, y, 8);
             }
         }
-        System.out.println("asd8");
         if (comprobarCasillaPermitida(percepcionJson, 11)){
             if(minimo >= this.getValorPasos(x, y, 11)){
                 minimo = this.getValorPasos(x, y, 11);
             }
         }
-        System.out.println("asd9");
         if (comprobarCasillaPermitida(percepcionJson, 13)){
             if(minimo >= this.getValorPasos(x, y, 13)){
                 minimo = this.getValorPasos(x, y, 13); 
             }
         }
-        System.out.println("asd10");
         if (comprobarCasillaPermitida(percepcionJson, 16)){
             if(minimo >= this.getValorPasos(x, y, 16)){
                 minimo = this.getValorPasos(x, y, 16);
             }
         }
-        System.out.println("asd11");
         if (comprobarCasillaPermitida(percepcionJson, 17)){
             if(minimo >= this.getValorPasos(x, y, 17)){
                 minimo = this.getValorPasos(x, y, 17);
             }
         }
-        System.out.println("asd12");
         if (comprobarCasillaPermitida(percepcionJson, 18)){
             if(minimo >= this.getValorPasos(x, y, 18)){
                 minimo = this.getValorPasos(x, y, 18);
             }
         }
-        System.out.println("aaaa");
+        
         // Añadir casillas
         if (comprobarCasillaPermitida(percepcionJson, 6)){
             if(minimo >= this.getValorPasos(x, y,6)){
@@ -750,9 +741,9 @@ public class Coches extends SuperAgent {
                 casillas.put(getValorEscaner(x, y, 18), "SE");
             }
         }    
-        System.out.println("asd6");
+        System.out.println("asd1");
         String movimiento = this.trafico(casillas,percepcionJson.get("sensor").asArray().size());
-        System.out.println("asd7");   
+        System.out.println("aaaa");  
         
         return ("move"+movimiento);        
     }
