@@ -301,10 +301,6 @@ public class Coches extends SuperAgent {
     
     public String explorar(JsonObject percepcionJson){
         String movimiento = "";
-        
-        // Coordenadas de posición
-        x = percepcionJson.get("gps").asObject().get("x").asInt();
-        y = percepcionJson.get("gps").asObject().get("y").asInt();
 
         TreeMap<Integer,String> casillas = new TreeMap<Integer,String>();
         
@@ -664,10 +660,6 @@ public class Coches extends SuperAgent {
      * 
      */
     public String irObjetivo(JsonObject percepcionJson){
-        // Coordenadas de posición
-        x = percepcionJson.get("gps").asObject().get("x").asInt();
-        y = percepcionJson.get("gps").asObject().get("y").asInt();
-
         // Algoritmo de cálculo de movimiento
         int minimo = Integer.MAX_VALUE;
 
