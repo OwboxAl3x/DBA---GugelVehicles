@@ -64,7 +64,8 @@ public class Coordinador extends SuperAgent {
     public void onMessage(ACLMessage msg)  {
 	try {
             if (msg.getSender().toString().contains("Cerastes")){
-                System.out.println("cola:"+msg.toString());
+                //System.out.println("cola:"+msg.getPerformative());
+                //System.out.println("cola:"+msg.toString());
                 mensajesServidor.Push(msg);
             } else {
                 mensajesCoches.Push(msg); 
@@ -106,6 +107,22 @@ public class Coordinador extends SuperAgent {
         JsonObject json = null;
         boolean salir;
         
+        /*this.enviarMensaje(new AgentID("Cerastes"), null, "", ACLMessage.CANCEL, null, null);
+        inbox = this.recibirMensaje(mensajesServidor);
+        System.out.println("mensaje: "+inbox.getPerformative()+" y: "+inbox.getContent()+" de: "+inbox.getSender().toString());
+        if (inbox.getContent().contains("trace")){
+            this.crearImagen(Json.parse(inbox.getContent()).asObject());
+            inbox = this.recibirMensaje(mensajesServidor);
+            System.out.println("mensaje: "+inbox.getPerformative()+" y: "+inbox.getContent()+" de: "+inbox.getSender().toString());
+        } else {
+            inbox = this.recibirMensaje(mensajesServidor);
+            System.out.println("mensaje: "+inbox.getPerformative()+" y: "+inbox.getContent()+" de: "+inbox.getSender().toString());
+            this.crearImagen(Json.parse(inbox.getContent()).asObject());
+        }*/
+        
+        //System.out.println("cancelado y comenzamos");
+        //System.out.println("mensaje: "+inbox.getPerformative()+" y: "+inbox.getContent()+" de: "+inbox.getSender().toString());
+        
         while (!salirSubscribe){
             salir = false;
             while (!salir){
@@ -114,21 +131,23 @@ public class Coordinador extends SuperAgent {
                 this.enviarMensaje(new AgentID("Cerastes"), json, null, ACLMessage.SUBSCRIBE, null, null);
                 
                 inbox = this.recibirMensaje(mensajesServidor);
-                
                 if (inbox.getContent().contains("trace")){
-                    System.out.println("traza recibida: "+inbox.toString());
-                    inbox = this.recibirMensaje(mensajesServidor); 
+                    this.crearImagen(Json.parse(inbox.getContent()).asObject());
+                    inbox = this.recibirMensaje(mensajesServidor);
+                } else {
+                    this.sleep(5000);
+                    if (!mensajesServidor.isEmpty())
+                        this.crearImagen(Json.parse(this.recibirMensaje(mensajesServidor).getContent()).asObject());
                 }
-                System.out.println("probando2"+inbox.toString());
-                
+                                               
                 // Si es un inform, terminamos
                 if (inbox.getPerformativeInt() == ACLMessage.INFORM)
                     salir = true;
-                
-                salirSubscribe = true;
             }
-        
+            
             conversationID = inbox.getConversationId();
+            
+            System.out.println("conversationID: "+conversationID);
             
             // Ahora los coches van a hacer login
             json = new JsonObject();
@@ -143,6 +162,8 @@ public class Coordinador extends SuperAgent {
             inbox3 = this.recibirMensaje(mensajesCoches);
             inbox4 = this.recibirMensaje(mensajesCoches);
 
+            System.out.println("mensaje: "+inbox.getPerformative()+" y: "+inbox.getContent()+" de: "+inbox.getSender().toString());
+            
             // Comprobamos si hay algún volador
             if (Json.parse(inbox.getContent()).asObject().get("capabilities").asObject().get("fly").asBoolean() == true)
                 volador = nombreCoche1;
@@ -161,14 +182,14 @@ public class Coordinador extends SuperAgent {
 
             
             // Vamos a comprobar si algún coche ha aparecido abajo del todo y si lo ha hecho tendremos el tamaño del mapa
-            if (Json.parse(inbox.getContent()).asObject().get("x").asInt() > 30)
-                tamanoMapa = Json.parse(inbox.getContent()).asObject().get("x").asInt();
-            else if (Json.parse(inbox2.getContent()).asObject().get("x").asInt() > 30)
-                tamanoMapa = Json.parse(inbox2.getContent()).asObject().get("x").asInt();
-            else if (Json.parse(inbox3.getContent()).asObject().get("x").asInt() > 30)
-                tamanoMapa = Json.parse(inbox3.getContent()).asObject().get("x").asInt();
-            else if (Json.parse(inbox4.getContent()).asObject().get("x").asInt() > 30)
-                tamanoMapa = Json.parse(inbox4.getContent()).asObject().get("x").asInt();
+            if (Json.parse(inbox.getContent()).asObject().get("y").asInt() > 30)
+                tamanoMapa = Json.parse(inbox.getContent()).asObject().get("y").asInt();
+            else if (Json.parse(inbox2.getContent()).asObject().get("y").asInt() > 30)
+                tamanoMapa = Json.parse(inbox2.getContent()).asObject().get("y").asInt();
+            else if (Json.parse(inbox3.getContent()).asObject().get("y").asInt() > 30)
+                tamanoMapa = Json.parse(inbox3.getContent()).asObject().get("y").asInt();
+            else if (Json.parse(inbox4.getContent()).asObject().get("y").asInt() > 30)
+                tamanoMapa = Json.parse(inbox4.getContent()).asObject().get("y").asInt();
 
             // Redondeamos por las paredes limites del mapa
             if (tamanoMapa != 0 && tamanoMapa < 100)
@@ -191,10 +212,11 @@ public class Coordinador extends SuperAgent {
                 
                 // Recibimos AGREE y traza               
                 inbox = this.recibirMensaje(mensajesServidor);
-                
-                inbox = this.recibirMensaje(mensajesServidor);   
+                inbox = this.recibirMensaje(mensajesServidor);
             }
         }
+        
+        System.out.println("si");
         
         // Como tenemos el tamaño del mapa, vamos a realizar el reparto de cuadrantes
         
@@ -205,6 +227,10 @@ public class Coordinador extends SuperAgent {
         posiciones.add(new Pair(Json.parse(inbox3.getContent()).asObject().get("x").asInt(),Json.parse(inbox.getContent()).asObject().get("y").asInt()));
         posiciones.add(new Pair(Json.parse(inbox4.getContent()).asObject().get("x").asInt(),Json.parse(inbox.getContent()).asObject().get("y").asInt()));
         ArrayList<Integer> asignacion = this.asignarCuadrantes(posiciones);
+        
+        for (int i=0; i<asignacion.size(); i++){
+            System.out.println("ie"+asignacion.get(i));
+        }
         
         // Coche 1
         json = new JsonObject();
@@ -234,7 +260,7 @@ public class Coordinador extends SuperAgent {
         inbox = this.recibirMensaje(mensajesCoches);
         inbox = this.recibirMensaje(mensajesCoches);
         inbox = this.recibirMensaje(mensajesCoches);
-        inbox = this.recibirMensaje(mensajesCoches);
+        inbox = this.recibirMensaje(mensajesCoches);   
     }
     
     public ACLMessage recibirMensaje(MessageQueue cola) throws InterruptedException{
@@ -257,16 +283,16 @@ public class Coordinador extends SuperAgent {
         for (int i=0; i<4; i++){
             x = (int) posiciones.get(i).getKey();
             y = (int) posiciones.get(i).getValue();
-            if (x > 0 && x < tamanoMapa/2 && y > 0 && y < tamanoMapa/2 && !cuadranteOcupado1){
+            if (y > 0 && y < tamanoMapa/2 && x > 0 && x < tamanoMapa/2 && !cuadranteOcupado1){
                 asignacion.add(1);
                 cuadranteOcupado1 = true;
-            } else if (x > 0 && x < tamanoMapa/2 && y > tamanoMapa/2 && y < tamanoMapa && !cuadranteOcupado2){
+            } else if (y > 0 && y < tamanoMapa/2 && x > tamanoMapa/2 && x < tamanoMapa && !cuadranteOcupado2){
                 asignacion.add(2);
                 cuadranteOcupado2 = true;
-            } else if (x > tamanoMapa/2 && x < tamanoMapa && y > 0 && y < tamanoMapa/2 && !cuadranteOcupado3){
+            } else if (y > tamanoMapa/2 && y < tamanoMapa && x > 0 && x < tamanoMapa/2 && !cuadranteOcupado3){
                 asignacion.add(3);
                 cuadranteOcupado3 = true;
-            } else if (x > tamanoMapa/2 && x < tamanoMapa && y > tamanoMapa/2 && y < tamanoMapa && !cuadranteOcupado4){
+            } else if (y > tamanoMapa/2 && y < tamanoMapa && x > tamanoMapa/2 && x < tamanoMapa && !cuadranteOcupado4){
                 asignacion.add(4); 
                 cuadranteOcupado4 = true;
             } else {

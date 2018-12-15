@@ -129,7 +129,7 @@ public class Coches extends SuperAgent {
                 this.enviarMensaje(new AgentID("Cerastes"), json, null, ACLMessage.REQUEST, conversationID, null);
 
                 inbox = this.recibirMensaje(mensajesServidor);
-
+                
                 // Si es un inform, terminamos
                 if (inbox.getPerformativeInt() == ACLMessage.INFORM)
                     salir = true;
