@@ -360,36 +360,6 @@ public class Coches extends SuperAgent {
         return new Pair(casilla_x, casilla_y);
     }
     
-    // previamente a esto, vamos 
-    //public void Comportamiento(){
-        // pedimos percepcion y la recibimos
-        
-        
-        // comprobamos percepcion para ver si alguien en radar, le mandamos mensaje
-        // if (){} // alguien nos ha visto pero nosotros no a el y nos manda un mensaje, llamamos trafico
-        // si mandamos mensaje somos activo si lo recibimos somos pasivo
-        
-        
-        // ya hemos comprobado trafico, si no hemos entrado en trafico seguimos
-        
-        // comprobamos el modo que vamos a utilizar, si hay objetivo, si hemos llegado al cuadrante
-        // avisar al coordinador si hemos encontrado el objetivo 
-        
-        // (refuel) y recibimos resultado
-        // puede que no refuel, en ese mandar mensaje al coordinador y esperamos mensaje de el pa morirnos
-        // en logout de este
-        
-        //  modo movimiento que toque, con booleanos, al movernos no olvidar comprobar si fuera del cuadrante
-        // modo objetivo
-        // algoritmo (move)
-        
-        // modo el otro
-        // algoritmo (move)
-        
-        
-        
-    //}
-    
     public void trafico(TreeMap<Float,String> casillas, int tamanoRadar) throws InterruptedException{
         boolean salir = false;
         while (!salir){
@@ -447,36 +417,6 @@ public class Coches extends SuperAgent {
         
         return (resultado);
     }
-    
-    /**
-     * @author Adrian Martin Jaimez 
-     * 
-     */
-    // pasivo o activo 
-    // esperamos su mensaje si activo lo mandamos si pasivo
-    // hasta crisis resuelta, si no seguimos aqui
-    /*public void trafico(int tipo) throws InterruptedException{
-        ACLMessage inbox = null;
-        JsonObject json;
-        int suPrioridad=0;
-        while (mensajesCoches.isEmpty()){};
-        inbox = mensajesCoches.Pop();
-        json = new JsonObject();
-        conversationID = Json.parse(inbox.getContent()).asObject().get("empieza").asString();
-    
-        this.enviarMensaje(new AgentID("OTROCOCHE"), null, null, ACLMessage.QUERY_REF, conversationID, null);
-        if (inbox.getPerformativeInt() == ACLMessage.INFORM){
-            suPrioridad = Json.parse(inbox.getContent()).asObject().get("prioridad").asObject().asInt();
-        }else{
-            //exit();
-        }
-        
-        if(suPrioridad>this.prioridad){
-            this.enviarMensaje(new AgentID("OTROCOCHE"), json, null, ACLMessage.REQUEST, conversationID, null);
-        }else{
-            //no me muevo
-        }
-    }*/
     
     /**
      * Obtiene el valor del escaner de una casilla
@@ -672,7 +612,7 @@ public class Coches extends SuperAgent {
      * @author Fernando Ruiz Hernández
      * 
      */
-    public String irObjetivo(JsonObject percepcionJson){
+    public String irObjetivo(JsonObject percepcionJson) throws InterruptedException{
         // Algoritmo de cálculo de movimiento
         int minimo = Integer.MAX_VALUE;
 
@@ -762,6 +702,7 @@ public class Coches extends SuperAgent {
             }
         }    
 
+        this.trafico(casillas,percepcionJson.get("radar").asArray().size());
         Map.Entry<Float,String> casillaResultado = casillas.firstEntry();
                 
         return ("move"+casillaResultado.getValue());        
