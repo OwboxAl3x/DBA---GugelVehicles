@@ -112,7 +112,6 @@ public class Coches extends SuperAgent {
     public void execute(){
         try {
             this.login();
-            System.out.print("ejecutado");
             this.comportamiento();
         } catch (InterruptedException e){
             System.out.println("Error al sacar mensaje de la cola");
@@ -194,19 +193,19 @@ public class Coches extends SuperAgent {
         ACLMessage inbox = null;
         JsonObject json;
         
+        System.out.println("asd");
+        
         while (!salir){
             // Pedimos percepción y la recibimos
-            this.enviarMensaje(new AgentID("Cerastes"), null, null, ACLMessage.QUERY_REF, conversationID, null);
+            this.enviarMensaje(new AgentID("Cerastes"), null, "", ACLMessage.QUERY_REF, conversationID, replyWith);
             inbox = this.recibirMensaje(mensajesServidor);
-            JsonObject percepcionJson = Json.parse(inbox.getContent()).asObject();
+            replyWith = inbox.getReplyWith();
+            
+            JsonObject percepcionJson = Json.parse(inbox.getContent()).asObject().get("result").asObject();
             
             // Actualizamos nuestra posición
-            x = percepcionJson.get("gps").asObject().get("x").asInt();
-            y = percepcionJson.get("gps").asObject().get("y").asInt();
-            
-            /*
-            trafico
-            */
+            x = percepcionJson.get("x").asInt();
+            y = percepcionJson.get("y").asInt();
             
             // Si el coordinador nos manda un mensaje es porque alguien ha encontrado el objetivo
             if (!mensajesCoordinador.isEmpty()){
@@ -220,33 +219,37 @@ public class Coches extends SuperAgent {
             }
             
             // Comprobamos si hemos llegado al cuadrante
-            if (cuadrante == 1 && x > 0 && x < tamanoMapa/2 && y > 0 && y < tamanoMapa/2){
+            if (cuadrante == 1 && y >= 0 && y < tamanoMapa/2 && x >= 0 && x < tamanoMapa/2){
                 irCuadrante = false;
-            } else if (cuadrante == 2 && x > 0 && x < tamanoMapa/2 && y > tamanoMapa/2 && y < tamanoMapa){
+            } else if (cuadrante == 2 && y >= 0 && y < tamanoMapa/2 && x >= tamanoMapa/2 && x < tamanoMapa){
                 irCuadrante = false;
-            } else if (cuadrante == 3 && x > tamanoMapa/2 && x < tamanoMapa && y > 0 && y < tamanoMapa/2){
+            } else if (cuadrante == 3 && y >= tamanoMapa/2 && y < tamanoMapa && x >= 0 && x < tamanoMapa/2){
                 irCuadrante = false;
-            } else if (cuadrante == 4 && x > tamanoMapa/2 && x < tamanoMapa && y > tamanoMapa/2 && y < tamanoMapa){
+            } else if (cuadrante == 4 && y >= tamanoMapa/2 && y < tamanoMapa && x >= tamanoMapa/2 && x < tamanoMapa){
                 irCuadrante = false;
             }
+            
+            
             
             // Inicializamos bateria
             if (bateria == 0.0)
                 bateria = Json.parse(inbox.getContent()).asObject().get("result").asObject().get("battery").asInt();
      
+            
             // Comprobamos bateria
             if (bateria <= 1){
                 json = new JsonObject();
                 json.add("command","refuel");
-                this.enviarMensaje(new AgentID("Cerastes"), json, null, ACLMessage.REQUEST, conversationID, null);
+                this.enviarMensaje(new AgentID("Cerastes"), json, null, ACLMessage.REQUEST, conversationID, replyWith);
                 inbox = this.recibirMensaje(mensajesServidor);
+                replyWith = inbox.getReplyWith();
                 
                 if (inbox.getPerformativeInt() == ACLMessage.REFUSE)
                     finRefuel = true;
             }
             
             // Comprobamos si estamos en el objetivo, en ese caso se avisa al coordinador
-            JsonArray radar = percepcionJson.get("result").asObject().get("radar").asArray();
+            JsonArray radar = percepcionJson.get("sensor").asArray();
             int posicionRadar = -1;
             for (int i=0; i<radar.size() && !objetivoEncontrado; i++){
                 if (radar.get(i).asInt() == 3){
@@ -254,7 +257,7 @@ public class Coches extends SuperAgent {
                     posicionRadar = i;
                 }
             }
-                
+               
             if (objetivoEncontrado){
                 json = new JsonObject();
                 JsonObject jsonCoordenadas = new JsonObject();
@@ -271,19 +274,23 @@ public class Coches extends SuperAgent {
                     irCuadrante = false;
             }
             
+            System.out.println("asd1");
             // Comprobamos en que modo estamos y nos movemos
-            if ((finRefuel && bateria <= 1) || valoRadar(percepcionJson.get("radar").asArray(),12) == 2){
+            if ((finRefuel && bateria <= 1) || valoRadar(percepcionJson.get("sensor").asArray(),12) == 2){
                 json = new JsonObject();
                 json.add("heTerminado","OK");
                 this.enviarMensaje(new AgentID(nombreCoordinador), json, null, ACLMessage.INFORM, null, null);
                 
                 salir = true;
             } else {
+                System.out.println("asd2");
                 String movimiento;
                 
                 if (irCuadrante){
+                    System.out.println("asd3");
                     if (!escanerCuadranteCreado)
                         this.construirEscanerCuadrante(tamanoMapa); // *size de esto?
+                    System.out.println("asd4");
                     movimiento = this.irObjetivo(percepcionJson);
                 } else if (!objetivoEncontrado){                  
                     movimiento = this.explorar(percepcionJson);
@@ -295,8 +302,9 @@ public class Coches extends SuperAgent {
                 
                 json = new JsonObject();
                 json.add("command",movimiento);
-                this.enviarMensaje(new AgentID("Cerastes"), json, null, ACLMessage.REQUEST, conversationID, null);
+                this.enviarMensaje(new AgentID("Cerastes"), json, null, ACLMessage.REQUEST, conversationID, replyWith);
                 inbox = this.recibirMensaje(mensajesServidor);
+                replyWith = inbox.getReplyWith();
                 
                 bateria--;
             }          
@@ -312,33 +320,33 @@ public class Coches extends SuperAgent {
         if (puedoVolar){
             this.explorarVolar(percepcionJson);
         } else {
-            if (comprobarCasillaPermitida(percepcionJson, 6) && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
+            if (comprobarCasillaPermitida(percepcionJson, 6) && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("sensor").asArray(), 6)){
                 casillas.put((float) getValorPasos(x, y, 6), "NW");
             }
-            if (comprobarCasillaPermitida(percepcionJson, 7) && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 7)){
+            if (comprobarCasillaPermitida(percepcionJson, 7) && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("sensor").asArray(), 7)){
                 casillas.put((float) getValorPasos(x, y, 7), "N");
             }
-            if (comprobarCasillaPermitida(percepcionJson, 8) && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 8)){
+            if (comprobarCasillaPermitida(percepcionJson, 8) && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("sensor").asArray(), 8)){
                 casillas.put((float) getValorPasos(x, y, 8), "NE");
             }
-            if (comprobarCasillaPermitida(percepcionJson, 11) && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 11)){
+            if (comprobarCasillaPermitida(percepcionJson, 11) && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("sensor").asArray(), 11)){
                 casillas.put((float) getValorPasos(x, y, 11), "W");
             }
-            if (comprobarCasillaPermitida(percepcionJson, 13) && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 13)){
+            if (comprobarCasillaPermitida(percepcionJson, 13) && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("sensor").asArray(), 13)){
                 casillas.put((float) getValorPasos(x, y, 13), "E");
             }
-            if (comprobarCasillaPermitida(percepcionJson, 16) && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 16)){
+            if (comprobarCasillaPermitida(percepcionJson, 16) && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("sensor").asArray(), 16)){
                 casillas.put((float) getValorPasos(x, y, 16), "SW");
             }
-            if (comprobarCasillaPermitida(percepcionJson, 17) && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 17)){
+            if (comprobarCasillaPermitida(percepcionJson, 17) && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("sensor").asArray(), 17)){
                 casillas.put((float) getValorPasos(x, y, 17), "S");
             }
-            if (comprobarCasillaPermitida(percepcionJson, 18) && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 18)){
+            if (comprobarCasillaPermitida(percepcionJson, 18) && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("sensor").asArray(), 18)){
                 casillas.put((float) getValorPasos(x, y, 18), "SE");
             }         
         }
         
-        String movimiento = this.trafico(casillas, percepcionJson.get("radar").asArray().size());
+        String movimiento = this.trafico(casillas, percepcionJson.get("sensor").asArray().size());
         
         return ("move"+movimiento);
     }
@@ -357,20 +365,20 @@ public class Coches extends SuperAgent {
                 barrido_derecho = !barrido_derecho;
                 barrido_preparado = false;
             }
-            else if (valoRadar(percepcionJson.get("radar").asArray(), 17) == 2) {
+            else if (valoRadar(percepcionJson.get("sensor").asArray(), 17) == 2) {
                 fin = true;
             }
         }
         else {
             if (barrido_derecho) {
-                if (x >= x_der_barrido || valoRadar(percepcionJson.get("radar").asArray(), 13) == 2) {
+                if (x >= x_der_barrido || valoRadar(percepcionJson.get("sensor").asArray(), 13) == 2) {
                     barrido_vertical = true;
                     y_barrido += 3;
                     barrido_preparado = false;
                 }
             }
             else {
-                if (x <= x_izq_barrido || valoRadar(percepcionJson.get("radar").asArray(), 11) == 2) {
+                if (x <= x_izq_barrido || valoRadar(percepcionJson.get("sensor").asArray(), 11) == 2) {
                     barrido_vertical = true;
                     y_barrido += 3;
                     barrido_preparado = false;
@@ -539,7 +547,9 @@ public class Coches extends SuperAgent {
                 valor = this.mapaPasos.get(y-1).get(x+1);
                 break;
             case 11:
+                System.out.println("ei");
                 valor = this.mapaPasos.get(y).get(x-1);
+                System.out.println("eeeiiii");
                 break;
             case 13:
                 valor = this.mapaPasos.get(y).get(x+1);
@@ -669,13 +679,13 @@ public class Coches extends SuperAgent {
      */
     public boolean comprobarCasillaPermitida(JsonObject percepcionJson, int casilla) {
         // Obstáculo
-        if (!puedoVolar && valoRadar(percepcionJson.get("radar").asArray(), casilla) == 1)
+        if (!puedoVolar && valoRadar(percepcionJson.get("sensor").asArray(), casilla) == 1)
             return false;
         // Borde del mundo
-        if (valoRadar(percepcionJson.get("radar").asArray(), casilla) == 2)
+        if (valoRadar(percepcionJson.get("sensor").asArray(), casilla) == 2)
             return false;
         // Otro vehículo
-        if (valoRadar(percepcionJson.get("radar").asArray(), casilla) == 4)
+        if (valoRadar(percepcionJson.get("sensor").asArray(), casilla) == 4)
             return false;
         // Permitido
         return true;
@@ -694,48 +704,56 @@ public class Coches extends SuperAgent {
 
         TreeMap<Float,String> casillas = new TreeMap<Float,String>();
 
+        System.out.println("asd5");
         // Calculamos mínimo
         if (comprobarCasillaPermitida(percepcionJson, 6)){
             if(minimo >= this.getValorPasos(x, y,6)){
                 minimo = this.getValorPasos(x, y,6);
             }
         }
+        System.out.println("asd6");
         if (comprobarCasillaPermitida(percepcionJson, 7)){
             if(minimo >= this.getValorPasos(x, y, 7)){
                 minimo = this.getValorPasos(x, y, 7);
             }
         }
+        System.out.println("asd7");
         if (comprobarCasillaPermitida(percepcionJson, 8)){
             if(minimo >= this.getValorPasos(x, y, 8)){
                 minimo = this.getValorPasos(x, y, 8);
             }
         }
+        System.out.println("asd8");
         if (comprobarCasillaPermitida(percepcionJson, 11)){
             if(minimo >= this.getValorPasos(x, y, 11)){
                 minimo = this.getValorPasos(x, y, 11);
             }
         }
+        System.out.println("asd9");
         if (comprobarCasillaPermitida(percepcionJson, 13)){
             if(minimo >= this.getValorPasos(x, y, 13)){
                 minimo = this.getValorPasos(x, y, 13); 
             }
         }
+        System.out.println("asd10");
         if (comprobarCasillaPermitida(percepcionJson, 16)){
             if(minimo >= this.getValorPasos(x, y, 16)){
                 minimo = this.getValorPasos(x, y, 16);
             }
         }
+        System.out.println("asd11");
         if (comprobarCasillaPermitida(percepcionJson, 17)){
             if(minimo >= this.getValorPasos(x, y, 17)){
                 minimo = this.getValorPasos(x, y, 17);
             }
         }
+        System.out.println("asd12");
         if (comprobarCasillaPermitida(percepcionJson, 18)){
             if(minimo >= this.getValorPasos(x, y, 18)){
                 minimo = this.getValorPasos(x, y, 18);
             }
         }
-
+        System.out.println("aaaa");
         // Añadir casillas
         if (comprobarCasillaPermitida(percepcionJson, 6)){
             if(minimo >= this.getValorPasos(x, y,6)){
@@ -777,9 +795,10 @@ public class Coches extends SuperAgent {
                 casillas.put(getValorEscaner(x, y, 18), "SE");
             }
         }    
-
-        String movimiento = this.trafico(casillas,percepcionJson.get("radar").asArray().size());
-                
+        System.out.println("asd6");
+        String movimiento = this.trafico(casillas,percepcionJson.get("sensor").asArray().size());
+        System.out.println("asd7");   
+        
         return ("move"+movimiento);        
     }
     
@@ -819,41 +838,41 @@ public class Coches extends SuperAgent {
         
         if (tamanoRadar <= 9){
             if (posicion == 6){
-                valorCasilla = radar.asArray().get(0).asInt();
+                valorCasilla = radar.get(0).asInt();
             } else if (posicion == 7){
-                valorCasilla = radar.asArray().get(1).asInt();
+                valorCasilla = radar.get(1).asInt();
             } else if (posicion == 8){
-                valorCasilla = radar.asArray().get(2).asInt();
+                valorCasilla = radar.get(2).asInt();
             } else if (posicion == 11){
-                valorCasilla = radar.asArray().get(3).asInt();
+                valorCasilla = radar.get(3).asInt();
             } else if (posicion == 13){
-                valorCasilla = radar.asArray().get(5).asInt();
+                valorCasilla = radar.get(5).asInt();
             } else if (posicion == 16){
-                valorCasilla = radar.asArray().get(6).asInt();
+                valorCasilla = radar.get(6).asInt();
             } else if (posicion == 17){
-                valorCasilla = radar.asArray().get(7).asInt();
+                valorCasilla = radar.get(7).asInt();
             } else if (posicion == 18){
-                valorCasilla = radar.asArray().get(8).asInt();
+                valorCasilla = radar.get(8).asInt();
             }
         } else if (tamanoRadar <= 25){
-            valorCasilla = radar.asArray().get(posicion).asInt();
+            valorCasilla = radar.get(posicion).asInt();
         } else if (tamanoRadar <= 121){
             if (posicion == 6){
-                valorCasilla = radar.asArray().get(48).asInt();
+                valorCasilla = radar.get(48).asInt();
             } else if (posicion == 7){
-                valorCasilla = radar.asArray().get(49).asInt();
+                valorCasilla = radar.get(49).asInt();
             } else if (posicion == 8){
-                valorCasilla = radar.asArray().get(50).asInt();
+                valorCasilla = radar.get(50).asInt();
             } else if (posicion == 11){
-                valorCasilla = radar.asArray().get(59).asInt();
+                valorCasilla = radar.get(59).asInt();
             } else if (posicion == 13){
-                valorCasilla = radar.asArray().get(61).asInt();
+                valorCasilla = radar.get(61).asInt();
             } else if (posicion == 16){
-                valorCasilla = radar.asArray().get(70).asInt();
+                valorCasilla = radar.get(70).asInt();
             } else if (posicion == 17){
-                valorCasilla = radar.asArray().get(71).asInt();
+                valorCasilla = radar.get(71).asInt();
             } else if (posicion == 18){
-                valorCasilla = radar.asArray().get(72).asInt();
+                valorCasilla = radar.get(72).asInt();
             }         
         }
         

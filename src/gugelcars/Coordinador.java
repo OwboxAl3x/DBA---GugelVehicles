@@ -84,7 +84,7 @@ public class Coordinador extends SuperAgent {
     public void execute(){
         try {
             this.login();
-            System.out.print("ejecutado");
+            System.out.print("ejecutadoCOORDINADOR");
             this.comportamiento();
             this.logout();
         } catch (InterruptedException e){
@@ -106,22 +106,7 @@ public class Coordinador extends SuperAgent {
         ACLMessage inbox4 = null;
         JsonObject json = null;
         boolean salir;
-        
-        /*this.enviarMensaje(new AgentID("Cerastes"), null, "", ACLMessage.CANCEL, null, null);
-        inbox = this.recibirMensaje(mensajesServidor);
-        System.out.println("mensaje: "+inbox.getPerformative()+" y: "+inbox.getContent()+" de: "+inbox.getSender().toString());
-        if (inbox.getContent().contains("trace")){
-            this.crearImagen(Json.parse(inbox.getContent()).asObject());
-            inbox = this.recibirMensaje(mensajesServidor);
-            System.out.println("mensaje: "+inbox.getPerformative()+" y: "+inbox.getContent()+" de: "+inbox.getSender().toString());
-        } else {
-            inbox = this.recibirMensaje(mensajesServidor);
-            System.out.println("mensaje: "+inbox.getPerformative()+" y: "+inbox.getContent()+" de: "+inbox.getSender().toString());
-            this.crearImagen(Json.parse(inbox.getContent()).asObject());
-        }*/
-        
-        //System.out.println("cancelado y comenzamos");
-        //System.out.println("mensaje: "+inbox.getPerformative()+" y: "+inbox.getContent()+" de: "+inbox.getSender().toString());
+        boolean primeraVuelta = true;
         
         while (!salirSubscribe){
             salir = false;
@@ -161,8 +146,6 @@ public class Coordinador extends SuperAgent {
             inbox2 = this.recibirMensaje(mensajesCoches);
             inbox3 = this.recibirMensaje(mensajesCoches);
             inbox4 = this.recibirMensaje(mensajesCoches);
-
-            System.out.println("mensaje: "+inbox.getPerformative()+" y: "+inbox.getContent()+" de: "+inbox.getSender().toString());
             
             // Comprobamos si hay algún volador
             if (Json.parse(inbox.getContent()).asObject().get("capabilities").asObject().get("fly").asBoolean() == true)
@@ -226,11 +209,7 @@ public class Coordinador extends SuperAgent {
         posiciones.add(new Pair(Json.parse(inbox2.getContent()).asObject().get("x").asInt(),Json.parse(inbox.getContent()).asObject().get("y").asInt()));
         posiciones.add(new Pair(Json.parse(inbox3.getContent()).asObject().get("x").asInt(),Json.parse(inbox.getContent()).asObject().get("y").asInt()));
         posiciones.add(new Pair(Json.parse(inbox4.getContent()).asObject().get("x").asInt(),Json.parse(inbox.getContent()).asObject().get("y").asInt()));
-        ArrayList<Integer> asignacion = this.asignarCuadrantes(posiciones);
-        
-        for (int i=0; i<asignacion.size(); i++){
-            System.out.println("ie"+asignacion.get(i));
-        }
+        ArrayList<Integer> asignacion = this.asignarCuadrantes(posiciones); 
         
         // Coche 1
         json = new JsonObject();
@@ -283,16 +262,16 @@ public class Coordinador extends SuperAgent {
         for (int i=0; i<4; i++){
             x = (int) posiciones.get(i).getKey();
             y = (int) posiciones.get(i).getValue();
-            if (y > 0 && y < tamanoMapa/2 && x > 0 && x < tamanoMapa/2 && !cuadranteOcupado1){
+            if (y >= 0 && y < tamanoMapa/2 && x >= 0 && x < tamanoMapa/2 && !cuadranteOcupado1){
                 asignacion.add(1);
                 cuadranteOcupado1 = true;
-            } else if (y > 0 && y < tamanoMapa/2 && x > tamanoMapa/2 && x < tamanoMapa && !cuadranteOcupado2){
+            } else if (y >= 0 && y < tamanoMapa/2 && x >= tamanoMapa/2 && x < tamanoMapa && !cuadranteOcupado2){
                 asignacion.add(2);
                 cuadranteOcupado2 = true;
-            } else if (y > tamanoMapa/2 && y < tamanoMapa && x > 0 && x < tamanoMapa/2 && !cuadranteOcupado3){
+            } else if (y >= tamanoMapa/2 && y < tamanoMapa && x >= 0 && x < tamanoMapa/2 && !cuadranteOcupado3){
                 asignacion.add(3);
                 cuadranteOcupado3 = true;
-            } else if (y > tamanoMapa/2 && y < tamanoMapa && x > tamanoMapa/2 && x < tamanoMapa && !cuadranteOcupado4){
+            } else if (y >= tamanoMapa/2 && y < tamanoMapa && x >= tamanoMapa/2 && x < tamanoMapa && !cuadranteOcupado4){
                 asignacion.add(4); 
                 cuadranteOcupado4 = true;
             } else {
@@ -307,7 +286,7 @@ public class Coordinador extends SuperAgent {
                 y = (int) posiciones.get(i).getValue();
                 
                 // Probaremos con los cuadrantes más cercanos al que él está
-                if (x > 0 && x < tamanoMapa/2 && y > 0 && y < tamanoMapa/2){
+                if (y >= 0 && y < tamanoMapa/2 && x >= 0 && x < tamanoMapa/2){
                     if (!cuadranteOcupado2){
                         asignacion.set(i, 2);
                         cuadranteOcupado2 = true;
@@ -318,7 +297,7 @@ public class Coordinador extends SuperAgent {
                         asignacion.set(i, 4);
                         cuadranteOcupado4 = true;
                     }
-                } else if (x > 0 && x < tamanoMapa/2 && y > tamanoMapa/2 && y < tamanoMapa){
+                } else if (y >= 0 && y < tamanoMapa/2 && x >= tamanoMapa/2 && x < tamanoMapa){
                     if (!cuadranteOcupado1){
                         asignacion.set(i, 1);
                         cuadranteOcupado1 = true;
@@ -329,7 +308,7 @@ public class Coordinador extends SuperAgent {
                         asignacion.set(i, 3);
                         cuadranteOcupado3 = true;
                     }
-                } else if (x > tamanoMapa/2 && x < tamanoMapa && y > 0 && y < tamanoMapa/2){
+                } else if (y >= tamanoMapa/2 && y < tamanoMapa && x >= 0 && x < tamanoMapa/2){
                     if (!cuadranteOcupado1){
                         asignacion.set(i, 1);
                         cuadranteOcupado1 = true;
@@ -340,7 +319,7 @@ public class Coordinador extends SuperAgent {
                         asignacion.set(i, 2);
                         cuadranteOcupado2 = true;
                     }
-                } else if (x > tamanoMapa/2 && x < tamanoMapa && y > tamanoMapa/2 && y < tamanoMapa){
+                } else if (y >= tamanoMapa/2 && y < tamanoMapa && x >= tamanoMapa/2 && x < tamanoMapa){
                     if (!cuadranteOcupado3){
                         asignacion.set(i, 3);
                         cuadranteOcupado3 = true;
