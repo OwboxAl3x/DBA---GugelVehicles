@@ -48,6 +48,8 @@ public class Coches extends SuperAgent {
     private int y;
     private int xObjetivo;
     private int yObjetivo;
+    private int xObjetivoCuadrante;
+    private int yObjetivoCuadrante;
     private ArrayList<ArrayList<Integer>> mapaPasos = new ArrayList<>();
     private ArrayList<ArrayList<Float>> mapaEscaner = new ArrayList<>();
     
@@ -219,23 +221,22 @@ public class Coches extends SuperAgent {
             }
             
             // Comprobamos si hemos llegado al cuadrante
-            if (cuadrante == 1 && y >= 0 && y < tamanoMapa/2 && x >= 0 && x < tamanoMapa/2){
+            if (!puedoVolar && cuadrante == 1 && y >= 0 && y < tamanoMapa/2 && x >= 0 && x < tamanoMapa/2){
                 irCuadrante = false;
-            } else if (cuadrante == 2 && y >= 0 && y < tamanoMapa/2 && x >= tamanoMapa/2 && x < tamanoMapa){
+            } else if (!puedoVolar && cuadrante == 2 && y >= 0 && y < tamanoMapa/2 && x >= tamanoMapa/2 && x < tamanoMapa){
                 irCuadrante = false;
-            } else if (cuadrante == 3 && y >= tamanoMapa/2 && y < tamanoMapa && x >= 0 && x < tamanoMapa/2){
+            } else if (!puedoVolar && cuadrante == 3 && y >= tamanoMapa/2 && y < tamanoMapa && x >= 0 && x < tamanoMapa/2){
                 irCuadrante = false;
-            } else if (cuadrante == 4 && y >= tamanoMapa/2 && y < tamanoMapa && x >= tamanoMapa/2 && x < tamanoMapa){
+            } else if (!puedoVolar && cuadrante == 4 && y >= tamanoMapa/2 && y < tamanoMapa && x >= tamanoMapa/2 && x < tamanoMapa){
+                irCuadrante = false;
+            } else if (puedoVolar && x == xObjetivoCuadrante && y == yObjetivoCuadrante){
                 irCuadrante = false;
             }
-            
-            
             
             // Inicializamos bateria
             if (bateria == 0.0)
                 bateria = Json.parse(inbox.getContent()).asObject().get("result").asObject().get("battery").asInt();
      
-            
             // Comprobamos bateria
             if (bateria <= 1){
                 json = new JsonObject();
@@ -646,21 +647,19 @@ public class Coches extends SuperAgent {
      * @author Fernando Ruiz Hernández
      */
     public void construirEscanerCuadrante(int size) {
-        int x_objetivo;
-        int y_objetivo;
         if (puedoVolar) {
-            x_objetivo = ((cuadrante-1) % 2) * (size/2);
-            y_objetivo = ((cuadrante-1) / 2) * (size/2);
-            x_izq_barrido = x_objetivo;
-            x_der_barrido = x_objetivo + size/2 - 1;
-            y_barrido = y_objetivo;
-            y_final = y_objetivo + size/2 - 1;
+            xObjetivoCuadrante = ((cuadrante-1) % 2) * (size/2);
+            yObjetivoCuadrante = ((cuadrante-1) / 2) * (size/2);
+            x_izq_barrido = xObjetivoCuadrante;
+            x_der_barrido = xObjetivoCuadrante + size/2 - 1;
+            y_barrido = yObjetivoCuadrante;
+            y_final = yObjetivoCuadrante + size/2 - 1;
         }
         else {
-            x_objetivo = (size * (((cuadrante-1) % 2)))/2;
-            y_objetivo = (size * (((cuadrante-1) / 2)))/2;
+            xObjetivoCuadrante = (size * (((cuadrante-1) % 2)))/2;
+            yObjetivoCuadrante = (size * (((cuadrante-1) / 2)))/2;
         }
-        construirEscaner(x_objetivo, y_objetivo, size);
+        construirEscaner(xObjetivoCuadrante, yObjetivoCuadrante, size);
     }
     
     /**
