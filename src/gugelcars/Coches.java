@@ -492,78 +492,34 @@ public class Coches extends SuperAgent {
     }
     
     /**
-     * Obtiene el valor del escaner de una casilla
+     * Obtiene el valor del escaner de una casilla (5x5)
      * @author Fernando Ruiz Hernández
-     * @author Adrian Martin 
      */
     
-    public float getValorEscaner(int x, int y, int celda) {
-        float valor = Float.MAX_VALUE;
-        switch (celda){
-            case 6:
-                valor = this.mapaEscaner.get(y-1).get(x-1);
-                break;
-            case 7:
-                valor = this.mapaEscaner.get(y-1).get(x);
-                break;
-            case 8:
-                valor = this.mapaEscaner.get(y-1).get(x+1);
-                break;
-            case 11:
-                valor = this.mapaEscaner.get(y).get(x-1);
-                break;
-            case 13:
-                valor = this.mapaEscaner.get(y).get(x+1);
-                break;
-            case 16:
-                valor = this.mapaEscaner.get(y+1).get(x-1);
-                break;
-            case 17:
-                valor = this.mapaEscaner.get(y+1).get(x);
-                break;
-            case 18:
-                valor = this.mapaEscaner.get(y+1).get(x+1);
-                break;
-        }
+    public float getValorEscaner(int x, int y, int casilla) {
+        int casilla_x = x - 2 + casilla%5;
+        int casilla_y = y - 2 + casilla/5;
+        float valor;
+        if (casilla_x < 0 || casilla_y<0 || casilla_x>=mapaEscaner.size() || casilla_y>=mapaEscaner.size())
+            valor = Float.MAX_VALUE;
+        else
+            valor = this.mapaEscaner.get(casilla_y).get(casilla_x);
         return valor;
     }
     
     /**
-     * Obtiene el valor de pasos de una casilla
+     * Obtiene el valor de pasos de una casilla (5x5)
      * @author Fernando Ruiz Hernández
-     * @author Adrian Martin 
      */
     
-    public int getValorPasos(int x, int y, int celda) {
-        int valor = Integer.MAX_VALUE;
-        switch (celda){
-            case 6:
-                valor = this.mapaPasos.get(y-1).get(x-1);
-                break;
-            case 7:
-                valor = this.mapaPasos.get(y-1).get(x);
-                break;
-            case 8:
-                valor = this.mapaPasos.get(y-1).get(x+1);
-                break;
-            case 11:
-                System.out.println("ei");
-                valor = this.mapaPasos.get(y).get(x-1);
-                System.out.println("eeeiiii");
-                break;
-            case 13:
-                valor = this.mapaPasos.get(y).get(x+1);
-                break;
-            case 16:
-                valor = this.mapaPasos.get(y+1).get(x-1);
-                break;
-            case 17:
-                valor = this.mapaPasos.get(y+1).get(x);
-                break;
-            case 18:
-                valor = this.mapaPasos.get(y+1).get(x+1);
-                break;
-        }
+    public int getValorPasos(int x, int y, int casilla) {
+        int casilla_x = x - 2 + casilla%5;
+        int casilla_y = y - 2 + casilla/5;
+        int valor;
+        if (casilla_x < 0 || casilla_y<0 || casilla_x>=mapaPasos.size() || casilla_y>=mapaPasos.size())
+            valor = Integer.MAX_VALUE;
+        else
+            valor = this.mapaPasos.get(casilla_y).get(casilla_x);
         return valor;
     }
     
