@@ -335,10 +335,6 @@ public class Coches extends SuperAgent {
         
         return (movimiento);
     }
-    
-    public void construirEscanerObjetivo(int size){
-        
-    }
 
      /**
      * 
@@ -608,13 +604,11 @@ public class Coches extends SuperAgent {
     }
     
     /**
-     * Construye el mapaEscaner para teniendo como objetivo un cuadrante
+     * Construye el mapaEscaner hacia una casilla arbitraria
      * @author Fernando Ruiz Hernández
      */
-    public void construirEscanerCuadrante(int size) {
-        
-        int x_objetivo = (size * (1 + ((cuadrante-1) % 2)))/4;
-        int y_objetivo = (size * (1 + ((cuadrante-1) / 2)))/4;
+    public void construirEscaner(int x_objetivo, int y_objetivo, int size) {
+        mapaEscaner.clear();
         float distancia;
         
         // Añadir nuevas filas
@@ -630,6 +624,25 @@ public class Coches extends SuperAgent {
             }
             mapaEscaner.add(fila);
         }
+    }
+    
+    /**
+     * Construye el mapaEscaner teniendo como objetivo su cuadrante
+     * @author Fernando Ruiz Hernández
+     */
+    public void construirEscanerCuadrante(int size) {
+        
+        int x_objetivo = (size * (1 + ((cuadrante-1) % 2)))/4;
+        int y_objetivo = (size * (1 + ((cuadrante-1) / 2)))/4;
+        construirEscaner(x_objetivo, y_objetivo, size);
+    }
+    
+    /**
+     * Construye el mapaEscaner hacia el objetivo real
+     * @author Fernando Ruiz Hernández
+     */
+    public void construirEscanerObjetivo(int size) {
+        construirEscaner(xObjetivo, yObjetivo, size);
     }
     
     /**
