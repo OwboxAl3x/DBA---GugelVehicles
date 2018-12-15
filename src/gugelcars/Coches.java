@@ -599,7 +599,7 @@ public class Coches extends SuperAgent {
      * @author Fernando Ruiz Hernández
      * 
      */
-    public String irObjetivo(JsonObject percepcionJson){
+    public String irObjetivo(JsonObject percepcionJson) throws InterruptedException{
         // Algoritmo de cálculo de movimiento
         int minimo = Integer.MAX_VALUE;
 
@@ -689,6 +689,7 @@ public class Coches extends SuperAgent {
             }
         }    
 
+        this.trafico(casillas,percepcionJson.get("radar").asArray().size());
         Map.Entry<Float,String> casillaResultado = casillas.firstEntry();
                 
         return ("move"+casillaResultado.getValue());        
