@@ -51,6 +51,14 @@ public class Coches extends SuperAgent {
     private ArrayList<ArrayList<Integer>> mapaPasos = new ArrayList<>();
     private ArrayList<ArrayList<Float>> mapaEscaner = new ArrayList<>();
     
+    private int x_izq_barrido;
+    private int x_der_barrido;
+    private int y_barrido;
+    private int y_final;
+    private boolean barrido_preparado = false;
+    private boolean barrido_derecho = true;
+    private boolean barrido_vertical = false;
+    
     public Coches(AgentID aid, String nombreCoordinador, String nombreCoche1, String nombreCoche2, String nombreCoche3, String nombreCoche4) throws Exception {
         super(aid);
         this.nombreCoordinador = nombreCoordinador;
@@ -338,6 +346,60 @@ public class Coches extends SuperAgent {
      /**
      * 
      * @author Fernando Ruiz Hernández
+     * 
+     */  
+    public String explorarVolar(JsonObject percepcionJson) throws InterruptedException{
+        boolean fin = false;
+        String movimiento = "";
+        if (barrido_vertical) {
+            if (y >= y_barrido) {
+                barrido_vertical = false;
+                barrido_derecho = !barrido_derecho;
+                barrido_preparado = false;
+            }
+            else if (valoRadar(percepcionJson.get("radar").asArray(), 17) == 2) {
+                fin = true;
+            }
+        }
+        else {
+            if (barrido_derecho) {
+                if (x >= x_der_barrido || valoRadar(percepcionJson.get("radar").asArray(), 13) == 2) {
+                    barrido_vertical = true;
+                    y_barrido += 3;
+                    barrido_preparado = false;
+                }
+            }
+            else {
+                if (x <= x_izq_barrido || valoRadar(percepcionJson.get("radar").asArray(), 11) == 2) {
+                    barrido_vertical = true;
+                    y_barrido += 3;
+                    barrido_preparado = false;
+                }
+            }
+        }
+        if (y_barrido>y_final) {
+            fin = true;
+        }
+        if (fin) {
+            // se acabó
+        }
+        if (!barrido_preparado) {
+            int x_objetivo;
+            int y_objetivo = y_barrido;
+            if (barrido_derecho)
+                x_objetivo = x_der_barrido;
+            else
+                x_objetivo = x_izq_barrido;
+            construirEscaner(x_objetivo, y_objetivo, tamanoMapa);
+            barrido_preparado = true;
+        }
+        movimiento = irObjetivo(percepcionJson);        
+        return ("move"+movimiento);
+    }
+    
+     /**
+     * 
+     * @author Fernando Ruiz Hernández
      * @author Manuel Ros Rodríguez
      * 
      */    
@@ -574,9 +636,20 @@ public class Coches extends SuperAgent {
      * @author Fernando Ruiz Hernández
      */
     public void construirEscanerCuadrante(int size) {
-        
-        int x_objetivo = (size * (1 + ((cuadrante-1) % 2)))/4;
-        int y_objetivo = (size * (1 + ((cuadrante-1) / 2)))/4;
+        int x_objetivo;
+        int y_objetivo;
+        if (puedoVolar) {
+            x_objetivo = ((cuadrante-1) % 2) * (size/2);
+            y_objetivo = ((cuadrante-1) / 2) * (size/2);
+            x_izq_barrido = x_objetivo;
+            x_der_barrido = x_objetivo + size/2 - 1;
+            y_barrido = y_objetivo;
+            y_final = y_objetivo + size/2 - 1;
+        }
+        else {
+            x_objetivo = (size * (((cuadrante-1) % 2)))/2;
+            y_objetivo = (size * (((cuadrante-1) / 2)))/2;
+        }
         construirEscaner(x_objetivo, y_objetivo, size);
     }
     
