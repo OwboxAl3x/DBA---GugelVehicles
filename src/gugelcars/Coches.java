@@ -159,7 +159,6 @@ public class Coches extends SuperAgent {
             if (inbox.getPerformativeInt() != ACLMessage.CANCEL)
                 salirSubscribe = true;
         }
-        System.out.println("ohsi");
         
         cuadrante = Json.parse(inbox.getContent()).asObject().get("empieza").asInt();
         tamanoMapa = Json.parse(inbox.getContent()).asObject().get("tamanoMapa").asInt();
@@ -299,41 +298,41 @@ public class Coches extends SuperAgent {
         inbox = this.recibirMensaje(mensajesCoordinador);
     }
     
-    public String explorar(JsonObject percepcionJson){
-        String movimiento = "";
-
-        TreeMap<Integer,String> casillas = new TreeMap<Integer,String>();
+    public String explorar(JsonObject percepcionJson) throws InterruptedException{
+        TreeMap<Float,String> casillas = new TreeMap<Float,String>();
         
-        if (puedoVolar){
+        //if (puedoVolar){
             
-        } else {
+        //} else {
             if (comprobarCasillaPermitida(percepcionJson, 6) && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
-                casillas.put(getValorPasos(x, y, 6), "NW");
+                casillas.put((float) getValorPasos(x, y, 6), "NW");
             }
             if (comprobarCasillaPermitida(percepcionJson, 7) && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 7)){
-                casillas.put(getValorPasos(x, y, 7), "N");
+                casillas.put((float) getValorPasos(x, y, 7), "N");
             }
             if (comprobarCasillaPermitida(percepcionJson, 8) && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 8)){
-                casillas.put(getValorPasos(x, y, 8), "NE");
+                casillas.put((float) getValorPasos(x, y, 8), "NE");
             }
             if (comprobarCasillaPermitida(percepcionJson, 11) && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 11)){
-                casillas.put(getValorPasos(x, y, 11), "W");
+                casillas.put((float) getValorPasos(x, y, 11), "W");
             }
             if (comprobarCasillaPermitida(percepcionJson, 13) && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 13)){
-                casillas.put(getValorPasos(x, y, 13), "E");
+                casillas.put((float) getValorPasos(x, y, 13), "E");
             }
             if (comprobarCasillaPermitida(percepcionJson, 16) && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 16)){
-                casillas.put(getValorPasos(x, y, 16), "SW");
+                casillas.put((float) getValorPasos(x, y, 16), "SW");
             }
             if (comprobarCasillaPermitida(percepcionJson, 17) && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 17)){
-                casillas.put(getValorPasos(x, y, 17), "S");
+                casillas.put((float) getValorPasos(x, y, 17), "S");
             }
             if (comprobarCasillaPermitida(percepcionJson, 18) && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 18)){
-                casillas.put(getValorPasos(x, y, 18), "SE");
+                casillas.put((float) getValorPasos(x, y, 18), "SE");
             }         
-        }
+        //}
         
-        return (movimiento);
+        String movimiento = this.trafico(casillas, percepcionJson.get("radar").asArray().size());
+        
+        return ("move"+movimiento);
     }
 
      /**
@@ -360,11 +359,13 @@ public class Coches extends SuperAgent {
         return new Pair(casilla_x, casilla_y);
     }
     
-    public void trafico(TreeMap<Float,String> casillas, int tamanoRadar) throws InterruptedException{
+    public String trafico(TreeMap<Float,String> casillas, int tamanoRadar) throws InterruptedException{
         boolean salir = false;
+        String puntoCardinal = "";
+        
         while (!salir){
             Map.Entry<Float,String> casillaResultado = casillas.firstEntry();
-            String puntoCardinal = casillaResultado.getValue();
+            puntoCardinal = casillaResultado.getValue();
 
             int posicion = this.dePCardinalACasilla(puntoCardinal);
             Pair<Integer,Integer> coordenadas = this.coordenadasCasillaRadar(tamanoRadar, posicion);
@@ -384,6 +385,8 @@ public class Coches extends SuperAgent {
             if (Json.parse(inbox.getContent()).asObject().get("result").asString() == "si")
                 salir = true;
         }
+        
+        return (puntoCardinal);
     }
     
     public int dePCardinalACasilla(String puntoCardinal){
@@ -702,10 +705,9 @@ public class Coches extends SuperAgent {
             }
         }    
 
-        this.trafico(casillas,percepcionJson.get("radar").asArray().size());
-        Map.Entry<Float,String> casillaResultado = casillas.firstEntry();
+        String movimiento = this.trafico(casillas,percepcionJson.get("radar").asArray().size());
                 
-        return ("move"+casillaResultado.getValue());        
+        return ("move"+movimiento);        
     }
     
      /**

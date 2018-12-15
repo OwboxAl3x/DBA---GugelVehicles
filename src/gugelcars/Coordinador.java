@@ -112,7 +112,6 @@ public class Coordinador extends SuperAgent {
                 json= new JsonObject();
                 json.add("world", mapa);
                 this.enviarMensaje(new AgentID("Cerastes"), json, null, ACLMessage.SUBSCRIBE, null, null);
-                System.out.println("probando1");
                 
                 inbox = this.recibirMensaje(mensajesServidor);
                 
@@ -140,12 +139,8 @@ public class Coordinador extends SuperAgent {
             this.enviarMensaje(new AgentID(nombreCoche4), json, null, ACLMessage.REQUEST, null, nombreCoche4);
 
             inbox = this.recibirMensaje(mensajesCoches);
-            System.out.println(inbox.toString());
-
             inbox2 = this.recibirMensaje(mensajesCoches);
-
             inbox3 = this.recibirMensaje(mensajesCoches);
-
             inbox4 = this.recibirMensaje(mensajesCoches);
 
             // Comprobamos si hay algún volador
@@ -353,6 +348,8 @@ public class Coordinador extends SuperAgent {
         while (!salir){
             ACLMessage inbox = this.recibirMensaje(mensajesCoches);
             JsonObject json = null;
+            
+            System.out.print("Coordinador mensaje recibido: "+inbox.getContent());
             
             if (inbox.getContent().contains("objetivoEncontrado")){
                 // Hemos encontrado el objetivo, avisemos a todos menos al coche que ya lo sabe
