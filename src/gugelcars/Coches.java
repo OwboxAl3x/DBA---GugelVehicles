@@ -346,39 +346,26 @@ public class Coches extends SuperAgent {
 
      /**
      * 
+     * @author Fernando Ruiz Hernández
      * @author Manuel Ros Rodríguez
      * 
      */    
     public Pair<Integer,Integer> coordenadasCasillaRadar(int tamanoRadar, int posicion){
-        ArrayList<Pair<Integer,Integer>> radarPosiciones = new ArrayList<Pair<Integer,Integer>>();
+        int casilla_x = x;
+        int casilla_y = y;
         
         if (tamanoRadar <= 9){
-            for (int i=0; i<3; i++){
-                for (int j=0; j<3; j++){
-                    int dif_x = (1-i)*(-1);
-                    int dif_y = (1-j)*(-1);
-                    radarPosiciones.add(new Pair(x+dif_x,y+dif_y));
-                }
-            }
+            casilla_x = x - 1 + posicion%3;
+            casilla_y = y - 1 + posicion/3;
         } else if (tamanoRadar <= 25){
-            for (int i=0; i<5; i++){
-                for (int j=0; j<5; j++){
-                    int dif_x = (2-i)*(-1);
-                    int dif_y = (2-j)*(-1);
-                    radarPosiciones.add(new Pair(x+dif_x,y+dif_y));
-                }
-            }
+            casilla_x = x - 2 + posicion%5;
+            casilla_y = y - 2 + posicion/5;
         } else if (tamanoRadar <= 121){
-            for (int i=0; i<11; i++){
-                for (int j=0; j<11; j++){
-                    int dif_x = (5-i)*(-1);
-                    int dif_y = (5-j)*(-1);
-                    radarPosiciones.add(new Pair(x+dif_x,y+dif_y));
-                }
-            }            
+            casilla_x = x - 5 + posicion%11;
+            casilla_y = y - 5 + posicion/11; 
         }
         
-        return (radarPosiciones.get(posicion));
+        return new Pair(casilla_x, casilla_y);
     }
     
     // previamente a esto, vamos 
@@ -650,6 +637,27 @@ public class Coches extends SuperAgent {
     }
     
     /**
+     * Comprueba si puede ir a la casilla.
+     * 
+     * @author Fernando Ruiz Hernández
+     * 
+     */
+    public boolean comprobarCasillaPermitida(JsonObject percepcionJson, int casilla) {
+        // Obstáculo
+        if (!puedoVolar && valoRadar(percepcionJson.get("radar").asArray(), casilla) == 1)
+            return false;
+        // Borde del mundo
+        if (valoRadar(percepcionJson.get("radar").asArray(), casilla) == 2)
+            return false;
+        // Otro vehículo
+        if (valoRadar(percepcionJson.get("radar").asArray(), casilla) == 4)
+            return false;
+        // Permitido
+        return true;
+                  
+    }
+    
+    /**
      * Se mueve hacia el objetivo.
      * 
      * @author Fernando Ruiz Hernández
@@ -665,175 +673,89 @@ public class Coches extends SuperAgent {
 
         TreeMap<Float,String> casillas = new TreeMap<Float,String>();
 
-        if (puedoVolar){
-            // Calculamos mínimo
-            if (valoRadar(percepcionJson.get("radar").asArray(), 6) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 6) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
-                if(minimo >= this.getValorPasos(x, y,6)){
-                    minimo = this.getValorPasos(x, y,6);
-                }
-            }
-            if (valoRadar(percepcionJson.get("radar").asArray(), 7) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 7) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
-                if(minimo >= this.getValorPasos(x, y, 7)){
-                    minimo = this.getValorPasos(x, y, 7);
-                }
-            }
-            if (valoRadar(percepcionJson.get("radar").asArray(), 8) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 8) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
-                if(minimo >= this.getValorPasos(x, y, 8)){
-                    minimo = this.getValorPasos(x, y, 8);
-                }
-            }
-            if (valoRadar(percepcionJson.get("radar").asArray(), 11) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 11) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
-                if(minimo >= this.getValorPasos(x, y, 11)){
-                    minimo = this.getValorPasos(x, y, 11);
-                }
-            }
-            if (valoRadar(percepcionJson.get("radar").asArray(), 13) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 13) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
-                if(minimo >= this.getValorPasos(x, y, 13)){
-                    minimo = this.getValorPasos(x, y, 13); 
-                }
-            }
-            if (valoRadar(percepcionJson.get("radar").asArray(), 16) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 16) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
-                if(minimo >= this.getValorPasos(x, y, 16)){
-                    minimo = this.getValorPasos(x, y, 16);
-                }
-            }
-            if (valoRadar(percepcionJson.get("radar").asArray(), 17) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 17) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
-                if(minimo >= this.getValorPasos(x, y, 17)){
-                    minimo = this.getValorPasos(x, y, 17);
-                }
-            }
-            if (valoRadar(percepcionJson.get("radar").asArray(), 18) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 18) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
-                if(minimo >= this.getValorPasos(x, y, 18)){
-                    minimo = this.getValorPasos(x, y, 18);
-                }
-            }
-
-            // Añadir casillas
-            if (valoRadar(percepcionJson.get("radar").asArray(), 6) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 6) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
-                if(minimo >= this.getValorPasos(x, y,6)){
-                    casillas.put(getValorEscaner(x, y, 6), "NW");
-                }
-            }
-            if (valoRadar(percepcionJson.get("radar").asArray(), 7) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 7) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
-                if(minimo >= this.getValorPasos(x, y, 7)){
-                    casillas.put(getValorEscaner(x, y, 7), "N");
-                }
-            }
-            if (valoRadar(percepcionJson.get("radar").asArray(), 8) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 8) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
-                if(minimo >= this.getValorPasos(x, y, 8)){
-                    casillas.put(getValorEscaner(x, y, 8), "NE");
-                }
-            }
-            if (valoRadar(percepcionJson.get("radar").asArray(), 11) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 11) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
-                if(minimo >= this.getValorPasos(x, y, 11)){
-                    casillas.put(getValorEscaner(x, y, 11), "W");
-                }
-            }
-            if (valoRadar(percepcionJson.get("radar").asArray(), 13) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 13) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
-                if(minimo >= this.getValorPasos(x, y, 13)){
-                    casillas.put(getValorEscaner(x, y, 13), "E"); 
-                }
-            }
-            if (valoRadar(percepcionJson.get("radar").asArray(), 16) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 16) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
-                if(minimo >= this.getValorPasos(x, y, 16)){
-                    casillas.put(getValorEscaner(x, y, 16), "SW");
-                }
-            }
-            if (valoRadar(percepcionJson.get("radar").asArray(), 17) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 17) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
-                if(minimo >= this.getValorPasos(x, y, 17)){
-                    casillas.put(getValorEscaner(x, y, 17), "S");
-                }
-            }
-            if (valoRadar(percepcionJson.get("radar").asArray(), 18) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 18) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
-                if(minimo >= this.getValorPasos(x, y, 18)){
-                    casillas.put(getValorEscaner(x, y, 18), "SE");
-                }
-            }            
-        } else {
-            // Calculamos mínimo
-            if (valoRadar(percepcionJson.get("radar").asArray(), 6) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 6) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 6) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
-                if(minimo >= this.getValorPasos(x, y,6)){
-                    minimo = this.getValorPasos(x, y,6);
-                }
-            }
-            if (valoRadar(percepcionJson.get("radar").asArray(), 7) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 7) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 7) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
-                if(minimo >= this.getValorPasos(x, y, 7)){
-                    minimo = this.getValorPasos(x, y, 7);
-                }
-            }
-            if (valoRadar(percepcionJson.get("radar").asArray(), 8) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 8) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 8) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
-                if(minimo >= this.getValorPasos(x, y, 8)){
-                    minimo = this.getValorPasos(x, y, 8);
-                }
-            }
-            if (valoRadar(percepcionJson.get("radar").asArray(), 11) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 11) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 11) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
-                if(minimo >= this.getValorPasos(x, y, 11)){
-                    minimo = this.getValorPasos(x, y, 11);
-                }
-            }
-            if (valoRadar(percepcionJson.get("radar").asArray(), 13) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 13) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 13) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
-                if(minimo >= this.getValorPasos(x, y, 13)){
-                    minimo = this.getValorPasos(x, y, 13); 
-                }
-            }
-            if (valoRadar(percepcionJson.get("radar").asArray(), 16) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 16) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 16) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
-                if(minimo >= this.getValorPasos(x, y, 16)){
-                    minimo = this.getValorPasos(x, y, 16);
-                }
-            }
-            if (valoRadar(percepcionJson.get("radar").asArray(), 17) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 17) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 17) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
-                if(minimo >= this.getValorPasos(x, y, 17)){
-                    minimo = this.getValorPasos(x, y, 17);
-                }
-            }
-            if (valoRadar(percepcionJson.get("radar").asArray(), 18) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 18) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 18) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
-                if(minimo >= this.getValorPasos(x, y, 18)){
-                    minimo = this.getValorPasos(x, y, 18);
-                }
-            }
-
-            // Añadir casillas
-            if (valoRadar(percepcionJson.get("radar").asArray(), 6) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 6) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 6) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
-                if(minimo >= this.getValorPasos(x, y,6)){
-                    casillas.put(getValorEscaner(x, y, 6), "NW");
-                }
-            }
-            if (valoRadar(percepcionJson.get("radar").asArray(), 7) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 7) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 7) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
-                if(minimo >= this.getValorPasos(x, y, 7)){
-                    casillas.put(getValorEscaner(x, y, 7), "N");
-                }
-            }
-            if (valoRadar(percepcionJson.get("radar").asArray(), 8) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 8) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 8) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
-                if(minimo >= this.getValorPasos(x, y, 8)){
-                    casillas.put(getValorEscaner(x, y, 8), "NE");
-                }
-            }
-            if (valoRadar(percepcionJson.get("radar").asArray(), 11) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 11) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 11) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
-                if(minimo >= this.getValorPasos(x, y, 11)){
-                    casillas.put(getValorEscaner(x, y, 11), "W");
-                }
-            }
-            if (valoRadar(percepcionJson.get("radar").asArray(), 13) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 13) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 13) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
-                if(minimo >= this.getValorPasos(x, y, 13)){
-                    casillas.put(getValorEscaner(x, y, 13), "E"); 
-                }
-            }
-            if (valoRadar(percepcionJson.get("radar").asArray(), 16) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 16) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 16) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
-                if(minimo >= this.getValorPasos(x, y, 16)){
-                    casillas.put(getValorEscaner(x, y, 16), "SW");
-                }
-            }
-            if (valoRadar(percepcionJson.get("radar").asArray(), 17) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 17) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 17) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
-                if(minimo >= this.getValorPasos(x, y, 17)){
-                    casillas.put(getValorEscaner(x, y, 17), "S");
-                }
-            }
-            if (valoRadar(percepcionJson.get("radar").asArray(), 18) != 1 && valoRadar(percepcionJson.get("radar").asArray(), 18) != 2 && valoRadar(percepcionJson.get("radar").asArray(), 18) != 4 && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
-                if(minimo >= this.getValorPasos(x, y, 18)){
-                    casillas.put(getValorEscaner(x, y, 18), "SE");
-                }
+        // Calculamos mínimo
+        if (comprobarCasillaPermitida(percepcionJson, 6)){
+            if(minimo >= this.getValorPasos(x, y,6)){
+                minimo = this.getValorPasos(x, y,6);
             }
         }
+        if (comprobarCasillaPermitida(percepcionJson, 7)){
+            if(minimo >= this.getValorPasos(x, y, 7)){
+                minimo = this.getValorPasos(x, y, 7);
+            }
+        }
+        if (comprobarCasillaPermitida(percepcionJson, 8)){
+            if(minimo >= this.getValorPasos(x, y, 8)){
+                minimo = this.getValorPasos(x, y, 8);
+            }
+        }
+        if (comprobarCasillaPermitida(percepcionJson, 11)){
+            if(minimo >= this.getValorPasos(x, y, 11)){
+                minimo = this.getValorPasos(x, y, 11);
+            }
+        }
+        if (comprobarCasillaPermitida(percepcionJson, 13)){
+            if(minimo >= this.getValorPasos(x, y, 13)){
+                minimo = this.getValorPasos(x, y, 13); 
+            }
+        }
+        if (comprobarCasillaPermitida(percepcionJson, 16)){
+            if(minimo >= this.getValorPasos(x, y, 16)){
+                minimo = this.getValorPasos(x, y, 16);
+            }
+        }
+        if (comprobarCasillaPermitida(percepcionJson, 17)){
+            if(minimo >= this.getValorPasos(x, y, 17)){
+                minimo = this.getValorPasos(x, y, 17);
+            }
+        }
+        if (comprobarCasillaPermitida(percepcionJson, 18)){
+            if(minimo >= this.getValorPasos(x, y, 18)){
+                minimo = this.getValorPasos(x, y, 18);
+            }
+        }
+
+        // Añadir casillas
+        if (comprobarCasillaPermitida(percepcionJson, 6)){
+            if(minimo >= this.getValorPasos(x, y,6)){
+                casillas.put(getValorEscaner(x, y, 6), "NW");
+            }
+        }
+        if (comprobarCasillaPermitida(percepcionJson, 7)){
+            if(minimo >= this.getValorPasos(x, y, 7)){
+                casillas.put(getValorEscaner(x, y, 7), "N");
+            }
+        }
+        if (comprobarCasillaPermitida(percepcionJson, 8)){
+            if(minimo >= this.getValorPasos(x, y, 8)){
+                casillas.put(getValorEscaner(x, y, 8), "NE");
+            }
+        }
+        if (comprobarCasillaPermitida(percepcionJson, 11)){
+            if(minimo >= this.getValorPasos(x, y, 11)){
+                casillas.put(getValorEscaner(x, y, 11), "W");
+            }
+        }
+        if (comprobarCasillaPermitida(percepcionJson, 13)){
+            if(minimo >= this.getValorPasos(x, y, 13)){
+                casillas.put(getValorEscaner(x, y, 13), "E"); 
+            }
+        }
+        if (comprobarCasillaPermitida(percepcionJson, 16)){
+            if(minimo >= this.getValorPasos(x, y, 16)){
+                casillas.put(getValorEscaner(x, y, 16), "SW");
+            }
+        }
+        if (comprobarCasillaPermitida(percepcionJson, 17)){
+            if(minimo >= this.getValorPasos(x, y, 17)){
+                casillas.put(getValorEscaner(x, y, 17), "S");
+            }
+        }
+        if (comprobarCasillaPermitida(percepcionJson, 18)){
+            if(minimo >= this.getValorPasos(x, y, 18)){
+                casillas.put(getValorEscaner(x, y, 18), "SE");
+            }
+        }    
 
         Map.Entry<Float,String> casillaResultado = casillas.firstEntry();
                 
