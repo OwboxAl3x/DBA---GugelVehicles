@@ -520,16 +520,14 @@ public class Coordinador extends SuperAgent {
         this.enviarMensaje(new AgentID("Cerastes"), new JsonObject(), null, ACLMessage.CANCEL, null, null);
 
         // Recibimos AGREE o traza               
-        while (mensajesServidor.isEmpty()){}
-        inbox = mensajesServidor.Pop(); 
+        inbox = this.recibirMensaje(mensajesServidor);
         
         // Comprobamos si es un agree o la traza
         if (inbox.getPerformativeInt() == ACLMessage.INFORM){
             json = Json.parse(inbox.getContent()).asObject();
             this.crearImagen(json);
         } else if (inbox.getPerformativeInt() == ACLMessage.AGREE){
-            while (mensajesServidor.isEmpty()){}
-            inbox2 = mensajesServidor.Pop();
+            inbox2 = this.recibirMensaje(mensajesServidor);
             json = Json.parse(inbox2.getContent()).asObject();
             this.crearImagen(json);
         } 
