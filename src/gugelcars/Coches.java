@@ -299,13 +299,42 @@ public class Coches extends SuperAgent {
         inbox = this.recibirMensaje(mensajesCoordinador);
     }
     
-    public String explorar(){
+    public String explorar(JsonObject percepcionJson){
         String movimiento = "";
+        
+        // Coordenadas de posición
+        x = percepcionJson.get("gps").asObject().get("x").asInt();
+        y = percepcionJson.get("gps").asObject().get("y").asInt();
+
+        TreeMap<Float,String> casillas = new TreeMap<Float,String>();
         
         if (puedoVolar){
             
         } else {
-            
+            if (comprobarCasillaPermitida(percepcionJson, 6) && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 6)){
+                casillas.put(getValorPasos(x, y, 6), "NW");
+            }
+            if (comprobarCasillaPermitida(percepcionJson, 7) && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 7)){
+                casillas.put(getValorPasos(x, y, 7), "N");
+            }
+            if (comprobarCasillaPermitida(percepcionJson, 8) && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 8)){
+                casillas.put(getValorPasos(x, y, 8), "NE");
+            }
+            if (comprobarCasillaPermitida(percepcionJson, 11) && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 11)){
+                casillas.put(getValorPasos(x, y, 11), "W");
+            }
+            if (comprobarCasillaPermitida(percepcionJson, 13) && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 13)){
+                casillas.put(getValorPasos(x, y, 13), "E");
+            }
+            if (comprobarCasillaPermitida(percepcionJson, 16) && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 16)){
+                casillas.put(getValorPasos(x, y, 16), "SW");
+            }
+            if (comprobarCasillaPermitida(percepcionJson, 17) && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 17)){
+                casillas.put(getValorPasos(x, y, 17), "S");
+            }
+            if (comprobarCasillaPermitida(percepcionJson, 18) && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("radar").asArray(), 18)){
+                casillas.put(getValorPasos(x, y, 18), "SE");
+            }         
         }
         
         return (movimiento);

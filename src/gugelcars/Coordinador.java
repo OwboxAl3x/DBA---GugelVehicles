@@ -348,6 +348,7 @@ public class Coordinador extends SuperAgent {
         boolean salir = false;
         int contadorTerminados = 0;
         int contadorMovimiento = 0;
+        ArrayList<ACLMessage> mensajesPuedoMoverme = new ArrayList<ACLMessage>();
         
         while (!salir){
             ACLMessage inbox = this.recibirMensaje(mensajesCoches);
@@ -374,16 +375,19 @@ public class Coordinador extends SuperAgent {
                     this.enviarMensaje(new AgentID(nombreCoche4), json, null, ACLMessage.INFORM, null, nombreCoche4);      
             } else if (inbox.getContent().contains("heTerminado")){
                 contadorTerminados++;
-            } else if (inbox.getContent().contains("heTerminado")){
-                contadorMovimiento++;
+            } else if (inbox.getContent().contains("puedoMoverme")){
+                mensajesPuedoMoverme.add(inbox);
+                contadorMovimiento++; 
             }
         
             if (contadorMovimiento == 4) {
-                
+                this.gestionarTrafico(mensajesPuedoMoverme);
+                contadorMovimiento = 0;
             }
             
-            if (contadorMovimiento != 0 && contadorTerminados != 0){
-                
+            if (contadorMovimiento + contadorTerminados == 4){
+                this.gestionarTrafico(mensajesPuedoMoverme);
+                contadorMovimiento = 0;
             }
             
             // Todos los coches han terminado, salimos del bucle
@@ -392,6 +396,62 @@ public class Coordinador extends SuperAgent {
         }
         // En el método logout, que es el que viene a continuación en el método execute(), se mandarán los CANCEL
     }
+    
+    public void gestionarTrafico(ArrayList<ACLMessage> mensajesPuedoMoverme) throws InterruptedException{
+        boolean salirTrafico = false;
+        JsonObject json = new JsonObject();
+        ACLMessage inbox;
+        
+        while (!salirTrafico){
+            salirTrafico = true;
+            // Fijamos un coche y comprobamos con los demás
+            for (int i=0; i<mensajesPuedoMoverme.size(); i++){
+                int xCoche = Json.parse(mensajesPuedoMoverme.get(i).getContent()).asObject().get("puedoMoverme").asObject().get("x").asInt();
+                int yCoche = Json.parse(mensajesPuedoMoverme.get(i).getContent()).asObject().get("puedoMoverme").asObject().get("y").asInt();
+                for (int j=0; j<mensajesPuedoMoverme.size(); j++){
+                    if (i != j){
+                        int xOtroCoche = Json.parse(mensajesPuedoMoverme.get(j).getContent()).asObject().get("puedoMoverme").asObject().get("x").asInt();
+                        int yOtroCoche = Json.parse(mensajesPuedoMoverme.get(j).getContent()).asObject().get("puedoMoverme").asObject().get("y").asInt();
+
+                        // Hay conflicto entre dos coches
+                        if (xCoche == xOtroCoche && yCoche == yOtroCoche){
+                            int opcionesCoche = Json.parse(mensajesPuedoMoverme.get(i).getContent()).asObject().get("puedoMoverme").asObject().get("opciones").asInt();
+                            int opcionesOtroCoche = Json.parse(mensajesPuedoMoverme.get(j).getContent()).asObject().get("puedoMoverme").asObject().get("opciones").asInt();
+
+                            // En caso de que haya cambios, repetiremos el bucle de nuevo para asegurarnos de que no haya conflicto
+                            salirTrafico = false;
+
+                            // Al coche que tenga más opciones disponibles le pedimos que elija otra y guardamos esa nueva información en el vector
+                            if (opcionesCoche >= opcionesOtroCoche){
+                                json = new JsonObject();
+                                json.add("result","no");
+                                this.enviarMensaje(mensajesPuedoMoverme.get(i).getSender(), json, null, ACLMessage.INFORM, null, null);
+                                inbox = this.recibirMensaje(mensajesCoches);
+                                mensajesPuedoMoverme.set(i, inbox);
+                            } else {
+                                json = new JsonObject();
+                                json.add("result","no");
+                                this.enviarMensaje(mensajesPuedoMoverme.get(j).getSender(), json, null, ACLMessage.INFORM, null, null);
+                                inbox = this.recibirMensaje(mensajesCoches);
+                                mensajesPuedoMoverme.set(j, inbox);                                        
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Hemos salido del bucle, ya no hay conflictos, damos permiso para moverse a los coches
+        json = new JsonObject();
+        json.add("result","si");
+        for (int i=0; i<mensajesPuedoMoverme.size(); i++){
+            this.enviarMensaje(mensajesPuedoMoverme.get(i).getSender(), json, null, ACLMessage.INFORM, null, null);                    
+        }
+
+        // Vaciamos el array
+        mensajesPuedoMoverme = new ArrayList<ACLMessage>();        
+    }
+    
     
     /**
     *
