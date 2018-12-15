@@ -306,7 +306,7 @@ public class Coches extends SuperAgent {
         x = percepcionJson.get("gps").asObject().get("x").asInt();
         y = percepcionJson.get("gps").asObject().get("y").asInt();
 
-        TreeMap<Float,String> casillas = new TreeMap<Float,String>();
+        TreeMap<Integer,String> casillas = new TreeMap<Integer,String>();
         
         if (puedoVolar){
             
