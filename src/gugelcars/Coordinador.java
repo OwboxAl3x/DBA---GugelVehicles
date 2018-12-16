@@ -110,7 +110,6 @@ public class Coordinador extends SuperAgent {
         ACLMessage inbox4 = null;
         JsonObject json = null;
         boolean salir;
-        boolean primeraVuelta = true;
         
         while (!salirSubscribe){
             salir = false;
@@ -126,7 +125,7 @@ public class Coordinador extends SuperAgent {
                     this.crearImagen(Json.parse(inbox.getContent()).asObject());
                     inbox = this.recibirMensaje(mensajesServidor);
                 } else {
-                    this.sleep(5000);
+                    this.sleep(1000);
                     if (!mensajesServidor.isEmpty())
                         this.crearImagen(Json.parse(this.recibirMensaje(mensajesServidor).getContent()).asObject());
                 }
