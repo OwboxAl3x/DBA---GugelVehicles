@@ -34,6 +34,7 @@ public class Coordinador extends SuperAgent {
     private String volador;
     private int tamanoMapa;
     private boolean objetivoEnviado;
+    private int contadorCompletado;
     
     public Coordinador(AgentID aid, String nombreCoche1, String nombreCoche2, String nombreCoche3, String nombreCoche4, String mapa) throws Exception {
         super(aid);
@@ -48,6 +49,7 @@ public class Coordinador extends SuperAgent {
         volador = "";
         tamanoMapa = 0;
         objetivoEnviado = false;
+        contadorCompletado = 0;
     }
     
     /**
@@ -161,11 +163,16 @@ public class Coordinador extends SuperAgent {
             else if (Json.parse(inbox4.getContent()).asObject().get("capabilities").asObject().get("fly").asBoolean() == true)
                 volador = nombreCoche4;    
 
-            // Comprobamos si hay algún camión
-            boolean camion = false;
-            if (Json.parse(inbox.getContent()).asObject().get("capabilities").asObject().get("fuelrate").asInt() == 4 || Json.parse(inbox2.getContent()).asObject().get("capabilities").asObject().get("fuelrate").asInt() == 4 ||
-                    Json.parse(inbox3.getContent()).asObject().get("capabilities").asObject().get("fuelrate").asInt() == 4 || Json.parse(inbox4.getContent()).asObject().get("capabilities").asObject().get("fuelrate").asInt() == 4)
-                camion = true;
+            // Comprobamos si hay un camión
+            int camiones = 0;
+            if (Json.parse(inbox.getContent()).asObject().get("capabilities").asObject().get("fuelrate").asInt() == 4)
+                camiones++;
+            if (Json.parse(inbox2.getContent()).asObject().get("capabilities").asObject().get("fuelrate").asInt() == 4)
+                camiones++;
+            if (Json.parse(inbox3.getContent()).asObject().get("capabilities").asObject().get("fuelrate").asInt() == 4)
+                camiones++;
+            if (Json.parse(inbox4.getContent()).asObject().get("capabilities").asObject().get("fuelrate").asInt() == 4)
+                camiones++;
 
             
             // Vamos a comprobar si algún coche ha aparecido abajo del todo y si lo ha hecho tendremos el tamaño del mapa
@@ -186,7 +193,7 @@ public class Coordinador extends SuperAgent {
             if (tamanoMapa != 0 && tamanoMapa > 150 && tamanoMapa < 500)
                 tamanoMapa = 500;       
             
-            if (!volador.isEmpty() && camion && tamanoMapa != 0){
+            if (!volador.isEmpty() && camiones == 1 && tamanoMapa != 0){
                 // Hemos conseguido lo que queríamos y podemos dejar de hacer subscribe
                 salirSubscribe = true;
             } else {
@@ -388,6 +395,8 @@ public class Coordinador extends SuperAgent {
                 }
             } else if (inbox.getContent().contains("heTerminado")){
                 contadorTerminados++;
+                if (inbox.getContent().contains("si"))
+                    contadorCompletado++;
             } else if (inbox.getContent().contains("puedoMoverme")){
                 mensajesPuedoMoverme.add(inbox);
                 contadorMovimiento++; 
@@ -504,7 +513,7 @@ public class Coordinador extends SuperAgent {
                     data[i] = (byte) array.get(i).asInt();
             }
             FileOutputStream fos;
-            fos = new FileOutputStream(conversationID+"_"+mapa+".png");
+            fos = new FileOutputStream(conversationID+"_"+mapa+"_"+contadorCompletado+".png");
             fos.write(data);
             fos.close();
             System.out.println("Imagen creada");

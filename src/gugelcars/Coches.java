@@ -47,6 +47,7 @@ public class Coches extends SuperAgent {
     private boolean escanerCuadranteCreado = false;
     private boolean escanerObjetivoCreado = false;
     private boolean ningunMovimiento = false;
+    private boolean soyUnoConElObjetivo = false;
     private int x;
     private int y;
     private int xObjetivo;
@@ -321,14 +322,19 @@ public class Coches extends SuperAgent {
                 }
             }
             
-            System.out.println("objetivo?:"+percepcionJson.get("goal").asBoolean());
+            if (percepcionJson.get("goal").asBoolean()){
+                soyUnoConElObjetivo = true;
+                System.out.println(this.getName()+" Estoy en el objetivo");
+            }
             
             // Comprobamos en que modo estamos y nos movemos
-            if ((finRefuel && bateria <= consumo) || percepcionJson.get("goal").asBoolean()){
+            if ((finRefuel && bateria <= consumo) || soyUnoConElObjetivo){
                 json = new JsonObject();
-                json.add("heTerminado","OK");
+                if (soyUnoConElObjetivo)
+                    json.add("heTerminado","si");
+                else
+                    json.add("heTerminado","no");
                 this.enviarMensaje(new AgentID(nombreCoordinador), json, null, ACLMessage.INFORM, null, null);
-                System.out.println(this.getName()+"hellegado");
                 salir = true;
             } else {
                 String movimiento;
@@ -376,17 +382,15 @@ public class Coches extends SuperAgent {
      * @author Alejandro García
      * 
      */     
-    public String explorar(JsonObject percepcionJson) throws InterruptedException{
-        TreeMap<Float,String> casillas = new TreeMap<Float,String>();
-        
+    public String explorar(JsonObject percepcionJson) throws InterruptedException{ 
         String movimiento = "";
         
         if (puedoVolar){
-            String movimientoVolar = this.explorarVolar(percepcionJson);
-            if (!movimientoVolar.equals("ninguno")){
-                casillas.put((float) 1, movimientoVolar);
-            }
+            System.out.println("a volar");
+            movimiento = this.explorarVolar(percepcionJson);
         } else {
+            TreeMap<Float,String> casillas = new TreeMap<Float,String>();
+            
             if (comprobarCasillaPermitida(percepcionJson, 6) && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("sensor").asArray(), 6)){
                 casillas.put((float) getValorPasos(x, y, 6), "NW");
             }
@@ -411,9 +415,10 @@ public class Coches extends SuperAgent {
             if (comprobarCasillaPermitida(percepcionJson, 18) && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("sensor").asArray(), 18)){
                 casillas.put((float) getValorPasos(x, y, 18), "SE");
             }         
+        
+            movimiento = this.trafico(casillas, percepcionJson.get("sensor").asArray().size());
         }
         
-        movimiento = this.trafico(casillas, percepcionJson.get("sensor").asArray().size());
         if (movimiento.equals("ninguno"))
             return ("ninguno");
         else 
