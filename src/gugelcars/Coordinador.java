@@ -115,7 +115,9 @@ public class Coordinador extends SuperAgent {
                 json.add("world", mapa);
                 this.enviarMensaje(new AgentID("Cerastes"), json, null, ACLMessage.SUBSCRIBE, null, null);
                 
+                System.out.println("quiero resibir");
                 inbox = this.recibirMensaje(mensajesServidor);
+                System.out.println(inbox.getContent());
                 if (inbox.getContent().contains("trace")){
                     this.crearImagen(Json.parse(inbox.getContent()).asObject());
                     inbox = this.recibirMensaje(mensajesServidor);
@@ -198,8 +200,6 @@ public class Coordinador extends SuperAgent {
                 inbox = this.recibirMensaje(mensajesServidor);
             }
         }
-        
-        System.out.println("si");
         
         // Como tenemos el tamaño del mapa, vamos a realizar el reparto de cuadrantes
         
@@ -381,15 +381,11 @@ public class Coordinador extends SuperAgent {
                 mensajesPuedoMoverme.add(inbox);
                 contadorMovimiento++; 
             }
-        
-            if (contadorMovimiento == 4) {
-                this.gestionarTrafico(mensajesPuedoMoverme);
-                contadorMovimiento = 0;
-            }
-            
+                    
             if (contadorMovimiento + contadorTerminados == 4){
                 this.gestionarTrafico(mensajesPuedoMoverme);
                 contadorMovimiento = 0;
+                mensajesPuedoMoverme = new ArrayList<ACLMessage>(); 
             }
             
             // Todos los coches han terminado, salimos del bucle
@@ -405,7 +401,6 @@ public class Coordinador extends SuperAgent {
         ACLMessage inbox;
         
         while (!salirTrafico){
-            System.out.println(" tamanowhile:"+mensajesPuedoMoverme.size());
             salirTrafico = true;
             // Fijamos un coche y comprobamos con los demás
             for (int i=0; i<mensajesPuedoMoverme.size(); i++){
@@ -428,39 +423,28 @@ public class Coordinador extends SuperAgent {
                             if (opcionesCoche >= opcionesOtroCoche){
                                 json = new JsonObject();
                                 json.add("result","no");
-                                System.out.println(json.toString());
                                 this.enviarMensaje(mensajesPuedoMoverme.get(i).getSender(), json, null, ACLMessage.INFORM, null, null);
                                 inbox = this.recibirMensaje(mensajesCoches);
                                 mensajesPuedoMoverme.set(i, inbox);
-                                System.out.println(" tamanoif:"+mensajesPuedoMoverme.size());
                             } else {
                                 json = new JsonObject();
                                 json.add("result","no");
-                                System.out.println(json.toString());
                                 this.enviarMensaje(mensajesPuedoMoverme.get(j).getSender(), json, null, ACLMessage.INFORM, null, null);
                                 inbox = this.recibirMensaje(mensajesCoches);
                                 mensajesPuedoMoverme.set(j, inbox);   
-                                System.out.println(" tamanoelse:"+mensajesPuedoMoverme.size());
                             }
                         }
                     }
                 }
             }
-            System.out.println(" tamanofinalwhile:"+mensajesPuedoMoverme.size());
         }
 
         // Hemos salido del bucle, ya no hay conflictos, damos permiso para moverse a los coches
         json = new JsonObject();
         json.add("result","si");
-        System.out.println(json.toString());
         for (int i=0; i<mensajesPuedoMoverme.size(); i++){
-            System.out.println(mensajesPuedoMoverme.get(i).getSender().toString()+" num mensaje:"+i);
             this.enviarMensaje(mensajesPuedoMoverme.get(i).getSender(), json, null, ACLMessage.INFORM, null, null);                    
         }
-
-        // Vaciamos el array
-        mensajesPuedoMoverme = new ArrayList<ACLMessage>(); 
-        System.out.println(" eliminado:"+mensajesPuedoMoverme.size());
     }
     
     

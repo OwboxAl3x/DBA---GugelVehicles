@@ -181,7 +181,8 @@ public class Coches extends SuperAgent {
         
         json = new JsonObject();
         json.add("result", "OK");
-        this.enviarMensaje(new AgentID(nombreCoordinador), json, null, ACLMessage.INFORM, null, this.getName());        
+        this.enviarMensaje(new AgentID(nombreCoordinador), json, null, ACLMessage.INFORM, null, this.getName()); 
+        System.out.println(this.getName()+"a2");
     }
     
     public ACLMessage recibirMensaje(MessageQueue cola) throws InterruptedException{
@@ -225,6 +226,7 @@ public class Coches extends SuperAgent {
         ACLMessage inbox = null;
         JsonObject json;
         
+        System.out.println(this.getName()+"a1");
         while (!salir){
             // Pedimos percepción y la recibimos
             this.enviarMensaje(new AgentID("Cerastes"), null, "", ACLMessage.QUERY_REF, conversationID, replyWith);
@@ -236,27 +238,19 @@ public class Coches extends SuperAgent {
             // Actualizamos nuestra posición
             x = percepcionJson.get("x").asInt();
             y = percepcionJson.get("y").asInt();
-            System.out.println(this.getName()+" posicion x:"+x+" posicion y:"+y);
             
             // Actualizamos el mapa de los pasos
             this.actualizarMapaPasos(percepcionJson);
-            System.out.println(this.getName()+"a1");
             
             // Si el coordinador nos manda un mensaje es porque alguien ha encontrado el objetivo
             if (!mensajesCoordinador.isEmpty()){
-                System.out.println(this.getName()+"b1");
                 inbox = mensajesCoordinador.Pop();
-                System.out.println(this.getName()+"b2");
-                System.out.println(this.getName()+" aaa:"+inbox.getContent());
                 xObjetivo = Json.parse(inbox.getContent()).asObject().get("objetivoEncontrado").asObject().get("x").asInt();
                 yObjetivo = Json.parse(inbox.getContent()).asObject().get("objetivoEncontrado").asObject().get("y").asInt();
-                System.out.println(this.getName()+"b3");
                 if (irCuadrante)
                     irCuadrante = false;
                 objetivoEncontrado = true;
-                System.out.println(this.getName()+"b4");
             }
-            System.out.println(this.getName()+"a2");
             
             // Comprobamos si hemos llegado al cuadrante
             if (!puedoVolar && cuadrante == 1 && y >= 0 && y < tamanoMapa/2 && x >= 0 && x < tamanoMapa/2){
@@ -270,7 +264,7 @@ public class Coches extends SuperAgent {
             } else if (puedoVolar && x == xObjetivoCuadrante && y == yObjetivoCuadrante){
                 irCuadrante = false;
             }
-            System.out.println(this.getName()+"a3");
+            
             // Inicializamos bateria
             if (bateria == 0.0)
                 bateria = Json.parse(inbox.getContent()).asObject().get("result").asObject().get("battery").asInt();
@@ -286,7 +280,7 @@ public class Coches extends SuperAgent {
                 if (inbox.getPerformativeInt() == ACLMessage.REFUSE)
                     finRefuel = true;
             }
-            System.out.println(this.getName()+"a4");
+            
             // Comprobamos si estamos en el objetivo, en ese caso se avisa al coordinador
             JsonArray radar = percepcionJson.get("sensor").asArray();
             int posicionRadar = -1;
@@ -296,7 +290,7 @@ public class Coches extends SuperAgent {
                     posicionRadar = i;
                 }
             }
-            System.out.println(this.getName()+"a5");   
+            
             if (objetivoEncontrado){
                 json = new JsonObject();
                 JsonObject jsonCoordenadas = new JsonObject();
@@ -312,6 +306,7 @@ public class Coches extends SuperAgent {
                 if (irCuadrante)
                     irCuadrante = false;
             }
+            
             System.out.println(this.getName()+"a6");
             // Comprobamos en que modo estamos y nos movemos
             if ((finRefuel && bateria <= 1) || valoRadar(percepcionJson.get("sensor").asArray(),12) == 2){
