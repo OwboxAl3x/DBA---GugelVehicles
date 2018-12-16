@@ -244,25 +244,20 @@ public class Coches extends SuperAgent {
             replyWith = inbox.getReplyWith();
             System.out.println(this.getName()+"a8 "+inbox.getContent().toString());
             JsonObject percepcionJson = Json.parse(inbox.getContent()).asObject().get("result").asObject();
-            System.out.println(this.getName()+"a7 ");
             // Actualizamos nuestra posición
             x = percepcionJson.get("x").asInt();
             y = percepcionJson.get("y").asInt();
-            System.out.println(this.getName()+"a6 ");
             // Actualizamos el mapa de los pasos
             this.actualizarMapaPasos(percepcionJson);
-            System.out.println(this.getName()+"a5 ");
             // Si el coordinador nos manda un mensaje es porque alguien ha encontrado el objetivo
             if (!mensajesCoordinadorObjetivo.isEmpty()){
                 inbox = mensajesCoordinadorObjetivo.Pop();
-                System.out.println(this.getName()+" obj: "+inbox.getContent());
                 xObjetivo = Json.parse(inbox.getContent()).asObject().get("objetivoEncontrado").asObject().get("x").asInt();
                 yObjetivo = Json.parse(inbox.getContent()).asObject().get("objetivoEncontrado").asObject().get("y").asInt();
                 if (irCuadrante)
                     irCuadrante = false;
                 objetivoEncontrado = true;
             }
-            System.out.println(this.getName()+"a4 ");
             // Comprobamos si hemos llegado al cuadrante
             if (!puedoVolar && cuadrante == 1 && y >= 0 && y < tamanoMapa/2 && x >= 0 && x < tamanoMapa/2){
                 irCuadrante = false;
@@ -275,11 +270,9 @@ public class Coches extends SuperAgent {
             } else if (puedoVolar && x == xObjetivoCuadrante && y == yObjetivoCuadrante){
                 irCuadrante = false;
             }
-            System.out.println(this.getName()+"a3 ");
             // Inicializamos bateria
             if (bateria == 0.0)
                 bateria = Json.parse(inbox.getContent()).asObject().get("result").asObject().get("battery").asInt();
-            System.out.println(this.getName()+"a2 ");
             // Comprobamos bateria
             if (bateria <= consumo){
                 json = new JsonObject();
@@ -291,8 +284,6 @@ public class Coches extends SuperAgent {
                 if (inbox.getPerformativeInt() == ACLMessage.REFUSE)
                     finRefuel = true;
             }
-            
-            System.out.println(this.getName()+"a1 ");
             
             // Comprobamos si estamos en el objetivo, en ese caso se avisa al coordinador
             JsonArray radar = percepcionJson.get("sensor").asArray();
@@ -344,16 +335,11 @@ public class Coches extends SuperAgent {
                         this.construirEscanerCuadrante(tamanoMapa); // *size de esto?
                     movimiento = this.irObjetivo(percepcionJson);
                 } else if (!objetivoEncontrado){
-                    System.out.println(this.getName()+"b1");
                     movimiento = this.explorar(percepcionJson);
-                    System.out.println(this.getName()+"b1fin");
                 } else {
-                    System.out.println(this.getName()+"b2");
                     if (!escanerObjetivoCreado)
-                        this.construirEscanerObjetivo(tamanoMapa); // *size de esto?  
-                    System.out.println(this.getName()+"b3");
+                        this.construirEscanerObjetivo(tamanoMapa); // *size de esto? 
                     movimiento = this.irObjetivo(percepcionJson);
-                    System.out.println(this.getName()+"b3fin");
                 }
                 
                 if (!movimiento.equals("ninguno")){
@@ -417,12 +403,11 @@ public class Coches extends SuperAgent {
             }         
         
             movimiento = this.trafico(casillas, percepcionJson.get("sensor").asArray().size());
+            if (!movimiento.equals("ninguno"))
+                movimiento = "move"+movimiento;
         }
         
-        if (movimiento.equals("ninguno"))
-            return ("ninguno");
-        else 
-            return ("move"+movimiento);
+        return (movimiento);
     }
 
      /**
@@ -516,25 +501,19 @@ public class Coches extends SuperAgent {
         String puntoCardinal = "";
         
         while (!salir){
-            System.out.println(this.getName()+"c1");
             if (casillas.size() == 0){
-                System.out.println(this.getName()+"c11");
                 puntoCardinal = "ninguno";
                 this.enviarMensaje(new AgentID(nombreCoordinador), null, "ningunMovimiento", ACLMessage.INFORM, null, null);
                 salir = true;
             } else {
-                System.out.println(this.getName()+"c2");
                 Map.Entry<Float,String> casillaResultado = casillas.firstEntry();
-                System.out.println(this.getName()+"c3");
                 casillas.remove(casillaResultado.getKey());
-                System.out.println(this.getName()+"c4");
 
                 puntoCardinal = casillaResultado.getValue();
 
                 int posicion = this.dePCardinalACasilla(puntoCardinal, tamanoRadar);
 
                 Pair<Integer,Integer> coordenadas = this.coordenadasCasillaRadar(tamanoRadar, posicion);
-System.out.println(this.getName()+"c5");
                 // Le preguntamos al coordinador si podemos movernos a esa posición
                 JsonObject json = new JsonObject();
                 JsonObject jsonInterno = new JsonObject();
@@ -545,7 +524,6 @@ System.out.println(this.getName()+"c5");
                 this.enviarMensaje(new AgentID(nombreCoordinador), json, null, ACLMessage.QUERY_IF, null, null);
 
                 ACLMessage inbox = this.recibirMensaje(mensajesCoordinador);
-                System.out.println(this.getName()+"c6"+inbox.getContent());
                 // Nos permite hacer el movimiento
                 if (Json.parse(inbox.getContent()).asObject().get("result").asString().equals("si"))
                     salir = true;
@@ -898,9 +876,7 @@ System.out.println(this.getName()+"c5");
             }
         } 
 
-        System.out.println(this.getName()+"b4");
         String movimiento = this.trafico(casillas,percepcionJson.get("sensor").asArray().size());
-        System.out.println(this.getName()+"b5 "+movimiento);
         
         if (movimiento.equals("ninguno"))
             return ("ninguno");
