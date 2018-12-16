@@ -33,6 +33,7 @@ public class Coordinador extends SuperAgent {
     private String conversationID;
     private String volador;
     private int tamanoMapa;
+    private boolean objetivoEnviado;
     
     public Coordinador(AgentID aid, String nombreCoche1, String nombreCoche2, String nombreCoche3, String nombreCoche4, String mapa) throws Exception {
         super(aid);
@@ -46,6 +47,7 @@ public class Coordinador extends SuperAgent {
         conversationID = "";
         volador = "";
         tamanoMapa = 0;
+        objetivoEnviado = false;
     }
     
     /**
@@ -243,7 +245,7 @@ public class Coordinador extends SuperAgent {
     }
     
     public ACLMessage recibirMensaje(MessageQueue cola) throws InterruptedException{
-        while (cola.isEmpty()){this.sleep(500);}
+        while (cola.isEmpty()){this.sleep(1);}
         return (cola.Pop());
     }
     
@@ -354,31 +356,42 @@ public class Coordinador extends SuperAgent {
             ACLMessage inbox = this.recibirMensaje(mensajesCoches);
             JsonObject json = null;
             
-            System.out.println("Coordinador mensaje recibido: "+inbox.getContent());
+            System.out.println("Coordinador mensaje recibido: "+inbox.getContent()+" emisor: "+inbox.getSender().toString());
             
             if (inbox.getContent().contains("objetivoEncontrado")){
-                // Hemos encontrado el objetivo, avisemos a todos menos al coche que ya lo sabe
-                json = Json.parse(inbox.getContent()).asObject();
-                
-                // Coche 1
-                if (!inbox.getSender().toString().contains(nombreCoche1))
-                    this.enviarMensaje(new AgentID(nombreCoche1), json, null, ACLMessage.INFORM, null, nombreCoche1); 
+                // Hemos encontrado el objetivo, avisemos a todos menos al coche que ya lo sabe                
+                if (!objetivoEnviado){
+                    json = Json.parse(inbox.getContent()).asObject();
+                    
+                    // Coche 1
+                    System.out.println(this.getName()+" obj: "+inbox.getSender().toString().contains(nombreCoche1));
+                    System.out.println(this.getName()+" obj: "+inbox.getSender().toString().contains(nombreCoche2));
+                    System.out.println(this.getName()+" obj: "+inbox.getSender().toString().contains(nombreCoche3));
+                    System.out.println(this.getName()+" obj: "+inbox.getSender().toString().contains(nombreCoche4));
+                    
+                    if (!inbox.getSender().toString().contains(nombreCoche1))
+                        this.enviarMensaje(new AgentID(nombreCoche1), json, null, ACLMessage.INFORM, null, nombreCoche1); 
 
-                // Coche 2
-                if (!inbox.getSender().toString().contains(nombreCoche2))
-                    this.enviarMensaje(new AgentID(nombreCoche2), json, null, ACLMessage.INFORM, null, nombreCoche2);  
+                    // Coche 2
+                    if (!inbox.getSender().toString().contains(nombreCoche2))
+                        this.enviarMensaje(new AgentID(nombreCoche2), json, null, ACLMessage.INFORM, null, nombreCoche2);  
 
-                // Coche 3
-                if (!inbox.getSender().toString().contains(nombreCoche3))
-                    this.enviarMensaje(new AgentID(nombreCoche3), json, null, ACLMessage.INFORM, null, nombreCoche3); 
+                    // Coche 3
+                    if (!inbox.getSender().toString().contains(nombreCoche3))
+                        this.enviarMensaje(new AgentID(nombreCoche3), json, null, ACLMessage.INFORM, null, nombreCoche3); 
 
-                // Coche 4
-                if (!inbox.getSender().toString().contains(nombreCoche4))
-                    this.enviarMensaje(new AgentID(nombreCoche4), json, null, ACLMessage.INFORM, null, nombreCoche4);      
+                    // Coche 4
+                    if (!inbox.getSender().toString().contains(nombreCoche4))
+                        this.enviarMensaje(new AgentID(nombreCoche4), json, null, ACLMessage.INFORM, null, nombreCoche4); 
+                    
+                    objetivoEnviado = true;
+                }
             } else if (inbox.getContent().contains("heTerminado")){
                 contadorTerminados++;
             } else if (inbox.getContent().contains("puedoMoverme")){
                 mensajesPuedoMoverme.add(inbox);
+                contadorMovimiento++; 
+            } else if (inbox.getContent().contains("ningunMovimiento")){
                 contadorMovimiento++; 
             }
                     
@@ -401,12 +414,11 @@ public class Coordinador extends SuperAgent {
         ACLMessage inbox;
         
         while (!salirTrafico){
-            salirTrafico = true;
             // Fijamos un coche y comprobamos con los demás
             for (int i=0; i<mensajesPuedoMoverme.size(); i++){
                 int xCoche = Json.parse(mensajesPuedoMoverme.get(i).getContent()).asObject().get("puedoMoverme").asObject().get("x").asInt();
                 int yCoche = Json.parse(mensajesPuedoMoverme.get(i).getContent()).asObject().get("puedoMoverme").asObject().get("y").asInt();
-                for (int j=0; j<mensajesPuedoMoverme.size(); j++){
+                for (int j=i+1; j<mensajesPuedoMoverme.size(); j++){
                     if (i != j){
                         int xOtroCoche = Json.parse(mensajesPuedoMoverme.get(j).getContent()).asObject().get("puedoMoverme").asObject().get("x").asInt();
                         int yOtroCoche = Json.parse(mensajesPuedoMoverme.get(j).getContent()).asObject().get("puedoMoverme").asObject().get("y").asInt();

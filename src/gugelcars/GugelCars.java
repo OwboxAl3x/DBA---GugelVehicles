@@ -22,11 +22,11 @@ public class GugelCars  {
         AgentsConnection.connect("isg2.ugr.es", 6000, "Cerastes", "Boyero", "Carducci", false);
         
         try {
-            int numeroInicial = 5;
-            String nombreCoche1 = "car"+numeroInicial;
-            String nombreCoche2 = "car"+numeroInicial+1;
-            String nombreCoche3 = "car"+numeroInicial+2;
-            String nombreCoche4 = "car"+numeroInicial+3;
+            int numeroInicial = 6;
+            String nombreCoche1 = "car"+numeroInicial+1;
+            String nombreCoche2 = "car"+numeroInicial+2;
+            String nombreCoche3 = "car"+numeroInicial+3;
+            String nombreCoche4 = "car"+numeroInicial+4;
             String nombreCoordinador = "coordinador"+numeroInicial;
             String mapa = "map1";
             

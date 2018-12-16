@@ -29,6 +29,7 @@ public class Coches extends SuperAgent {
     private String nombreCoche4;
     private String nombreCoordinador;
     private MessageQueue mensajesCoordinador;
+    private MessageQueue mensajesCoordinadorObjetivo;
     private MessageQueue mensajesCoches;
     private MessageQueue mensajesServidor;
     private String conversationID;
@@ -37,6 +38,7 @@ public class Coches extends SuperAgent {
     private int cuadrante;
     private boolean puedoVolar;
     private int prioridad;
+    private int consumo;
     
     private double bateria = 0.0;
     private boolean finRefuel = false;
@@ -72,12 +74,14 @@ public class Coches extends SuperAgent {
         mensajesCoordinador = new MessageQueue(30); // OJO, solo caben 30 mensajes
         mensajesCoches = new MessageQueue(30); // OJO, solo caben 30 mensajes
         mensajesServidor = new MessageQueue(30); // OJO, solo caben 30 mensajes
+        mensajesCoordinadorObjetivo = new MessageQueue(30);
         conversationID = "";
         replyWith = "";
         tamanoMapa = 0;
         cuadrante = 0;
         puedoVolar = false;
         prioridad = 0;
+        consumo = 0;
     }
     
     /**
@@ -96,7 +100,11 @@ public class Coches extends SuperAgent {
     public void onMessage(ACLMessage msg)  {
 	try {
             if (msg.getSender().toString().contains(nombreCoordinador)){
-                mensajesCoordinador.Push(msg);
+                if (msg.getContent().contains("objetivoEncontrado")){
+                    mensajesCoordinadorObjetivo.Push(msg);
+                } else {
+                    mensajesCoordinador.Push(msg);
+                }
             } else if (msg.getSender().toString().contains("Cerastes")){
                 mensajesServidor.Push(msg); 
             } else {
@@ -163,6 +171,9 @@ public class Coches extends SuperAgent {
             if (mensajeCoordinador.get("capabilities").asObject().get("fly").asBoolean() == true)
                 puedoVolar = true;
             
+            // Obtenemos el consumo
+            consumo = mensajeCoordinador.get("capabilities").asObject().get("fuelrate").asInt();
+            
             // Terminamos de preparar el mensaje para el coordinador y se lo enviamos
             mensajeCoordinador.add("x", Json.parse(inbox.getContent()).asObject().get("result").asObject().get("x").asInt());
             mensajeCoordinador.add("y", Json.parse(inbox.getContent()).asObject().get("result").asObject().get("y").asInt());
@@ -182,11 +193,10 @@ public class Coches extends SuperAgent {
         json = new JsonObject();
         json.add("result", "OK");
         this.enviarMensaje(new AgentID(nombreCoordinador), json, null, ACLMessage.INFORM, null, this.getName()); 
-        System.out.println(this.getName()+"a2");
     }
     
     public ACLMessage recibirMensaje(MessageQueue cola) throws InterruptedException{
-        while (cola.isEmpty()){this.sleep(500);}
+        while (cola.isEmpty()){this.sleep(1);}
         return (cola.Pop());
     }
     
@@ -226,7 +236,6 @@ public class Coches extends SuperAgent {
         ACLMessage inbox = null;
         JsonObject json;
         
-        System.out.println(this.getName()+"a1");
         while (!salir){
             // Pedimos percepción y la recibimos
             this.enviarMensaje(new AgentID("Cerastes"), null, "", ACLMessage.QUERY_REF, conversationID, replyWith);
@@ -243,8 +252,9 @@ public class Coches extends SuperAgent {
             this.actualizarMapaPasos(percepcionJson);
             
             // Si el coordinador nos manda un mensaje es porque alguien ha encontrado el objetivo
-            if (!mensajesCoordinador.isEmpty()){
-                inbox = mensajesCoordinador.Pop();
+            if (!mensajesCoordinadorObjetivo.isEmpty()){
+                inbox = mensajesCoordinadorObjetivo.Pop();
+                System.out.println(this.getName()+" obj: "+inbox.getContent());
                 xObjetivo = Json.parse(inbox.getContent()).asObject().get("objetivoEncontrado").asObject().get("x").asInt();
                 yObjetivo = Json.parse(inbox.getContent()).asObject().get("objetivoEncontrado").asObject().get("y").asInt();
                 if (irCuadrante)
@@ -270,7 +280,7 @@ public class Coches extends SuperAgent {
                 bateria = Json.parse(inbox.getContent()).asObject().get("result").asObject().get("battery").asInt();
      
             // Comprobamos bateria
-            if (bateria <= 1){
+            if (bateria <= consumo){
                 json = new JsonObject();
                 json.add("command","refuel");
                 this.enviarMensaje(new AgentID("Cerastes"), json, null, ACLMessage.REQUEST, conversationID, replyWith);
@@ -284,36 +294,39 @@ public class Coches extends SuperAgent {
             // Comprobamos si estamos en el objetivo, en ese caso se avisa al coordinador
             JsonArray radar = percepcionJson.get("sensor").asArray();
             int posicionRadar = -1;
-            for (int i=0; i<radar.size() && !objetivoEncontrado; i++){
-                if (radar.get(i).asInt() == 3){
-                    objetivoEncontrado = true;
-                    posicionRadar = i;
+            if (!objetivoEncontrado){
+                for (int i=0; i<radar.size() && !objetivoEncontrado; i++){
+                    if (radar.get(i).asInt() == 3){
+                        objetivoEncontrado = true;
+                        posicionRadar = i;
+                    }
+                }
+                
+                if (objetivoEncontrado){
+                    json = new JsonObject();
+                    JsonObject jsonCoordenadas = new JsonObject();
+                    Pair<Integer,Integer> coordenadas = this.coordenadasCasillaRadar(radar.size(), posicionRadar);
+                    xObjetivo = coordenadas.getKey();
+                    yObjetivo = coordenadas.getValue();
+                    jsonCoordenadas.add("x",xObjetivo);
+                    jsonCoordenadas.add("y",yObjetivo);
+                    json.add("objetivoEncontrado",jsonCoordenadas);
+
+                    this.enviarMensaje(new AgentID(nombreCoordinador), json, null, ACLMessage.INFORM, null, null); // CHECK**
+
+                    if (irCuadrante)
+                        irCuadrante = false;
                 }
             }
             
-            if (objetivoEncontrado){
-                json = new JsonObject();
-                JsonObject jsonCoordenadas = new JsonObject();
-                Pair<Integer,Integer> coordenadas = this.coordenadasCasillaRadar(radar.size(), posicionRadar);
-                xObjetivo = coordenadas.getKey();
-                yObjetivo = coordenadas.getValue();
-                jsonCoordenadas.add("x",xObjetivo);
-                jsonCoordenadas.add("y",yObjetivo);
-                json.add("objetivoEncontrado",jsonCoordenadas);
-                
-                this.enviarMensaje(new AgentID(nombreCoordinador), json, null, ACLMessage.INFORM, null, null); // CHECK**
-                
-                if (irCuadrante)
-                    irCuadrante = false;
-            }
+            System.out.println("objetivo?:"+(valoRadar(percepcionJson.get("sensor").asArray(),12) == 3));
             
-            System.out.println(this.getName()+"a6");
             // Comprobamos en que modo estamos y nos movemos
-            if ((finRefuel && bateria <= 1) || valoRadar(percepcionJson.get("sensor").asArray(),12) == 2){
+            if ((finRefuel && bateria <= consumo) || valoRadar(percepcionJson.get("sensor").asArray(),12) == 3){
                 json = new JsonObject();
                 json.add("heTerminado","OK");
                 this.enviarMensaje(new AgentID(nombreCoordinador), json, null, ACLMessage.INFORM, null, null);
-                
+                System.out.println(this.getName()+"hellegado");
                 salir = true;
             } else {
                 String movimiento;
@@ -322,21 +335,30 @@ public class Coches extends SuperAgent {
                     if (!escanerCuadranteCreado)
                         this.construirEscanerCuadrante(tamanoMapa); // *size de esto?
                     movimiento = this.irObjetivo(percepcionJson);
-                } else if (!objetivoEncontrado){                  
+                } else if (!objetivoEncontrado){
+                    System.out.println(this.getName()+"b1");
                     movimiento = this.explorar(percepcionJson);
+                    System.out.println(this.getName()+"b1fin");
                 } else {
+                    System.out.println(this.getName()+"b2");
                     if (!escanerObjetivoCreado)
                         this.construirEscanerObjetivo(tamanoMapa); // *size de esto?  
+                    System.out.println(this.getName()+"b3");
                     movimiento = this.irObjetivo(percepcionJson);
+                    System.out.println(this.getName()+"b3fin");
                 }
                 
-                json = new JsonObject();
-                json.add("command",movimiento);
-                this.enviarMensaje(new AgentID("Cerastes"), json, null, ACLMessage.REQUEST, conversationID, replyWith);
-                inbox = this.recibirMensaje(mensajesServidor);
-                replyWith = inbox.getReplyWith();
-                
-                bateria--;
+                if (!movimiento.equals("ninguno")){
+                    json = new JsonObject();
+                    json.add("command",movimiento);
+                    this.enviarMensaje(new AgentID("Cerastes"), json, null, ACLMessage.REQUEST, conversationID, replyWith);
+                    inbox = this.recibirMensaje(mensajesServidor);
+                    replyWith = inbox.getReplyWith();
+
+                    bateria = bateria - consumo;
+                } else {
+                    System.out.println(this.getName()+"ninguno");
+                }
             }          
         }
         
@@ -385,8 +407,10 @@ public class Coches extends SuperAgent {
         }
         
         String movimiento = this.trafico(casillas, percepcionJson.get("sensor").asArray().size());
-        
-        return ("move"+movimiento);
+        if (movimiento.equals("ninguno"))
+            return ("ninguno");
+        else 
+            return ("move"+movimiento);
     }
 
      /**
@@ -465,7 +489,7 @@ public class Coches extends SuperAgent {
             casilla_x = x - 5 + posicion%11;
             casilla_y = y - 5 + posicion/11; 
         }
-        System.out.println(this.getName()+" x: "+casilla_x+" y:"+casilla_y+" posicion "+posicion + " tamanoRadar "+tamanoRadar);
+        
         return new Pair(casilla_x, casilla_y);
     }
     
@@ -480,30 +504,40 @@ public class Coches extends SuperAgent {
         String puntoCardinal = "";
         
         while (!salir){
-            System.out.println(this.getName()+" tamano: "+casillas.size());
-            Map.Entry<Float,String> casillaResultado = casillas.firstEntry();
-            casillas.remove(casillaResultado.getKey());
-
-            puntoCardinal = casillaResultado.getValue();
-
-            int posicion = this.dePCardinalACasilla(puntoCardinal, tamanoRadar);
-
-            Pair<Integer,Integer> coordenadas = this.coordenadasCasillaRadar(tamanoRadar, posicion);
-
-            // Le preguntamos al coordinador si podemos movernos a esa posición
-            JsonObject json = new JsonObject();
-            JsonObject jsonInterno = new JsonObject();
-            jsonInterno.add("x",coordenadas.getKey());
-            jsonInterno.add("y",coordenadas.getValue());
-            jsonInterno.add("opciones",casillas.size());
-            json.add("puedoMoverme",jsonInterno);
-            this.enviarMensaje(new AgentID(nombreCoordinador), json, null, ACLMessage.QUERY_IF, null, null);
-
-            ACLMessage inbox = this.recibirMensaje(mensajesCoordinador);
-
-            // Nos permite hacer el movimiento
-            if (Json.parse(inbox.getContent()).asObject().get("result").asString().equals("si"))
+            System.out.println(this.getName()+"c1");
+            if (casillas.size() == 0){
+                System.out.println(this.getName()+"c11");
+                puntoCardinal = "ninguno";
+                this.enviarMensaje(new AgentID(nombreCoordinador), null, "ningunMovimiento", ACLMessage.INFORM, null, null);
                 salir = true;
+            } else {
+                System.out.println(this.getName()+"c2");
+                Map.Entry<Float,String> casillaResultado = casillas.firstEntry();
+                System.out.println(this.getName()+"c3");
+                casillas.remove(casillaResultado.getKey());
+                System.out.println(this.getName()+"c4");
+
+                puntoCardinal = casillaResultado.getValue();
+
+                int posicion = this.dePCardinalACasilla(puntoCardinal, tamanoRadar);
+
+                Pair<Integer,Integer> coordenadas = this.coordenadasCasillaRadar(tamanoRadar, posicion);
+System.out.println(this.getName()+"c5");
+                // Le preguntamos al coordinador si podemos movernos a esa posición
+                JsonObject json = new JsonObject();
+                JsonObject jsonInterno = new JsonObject();
+                jsonInterno.add("x",coordenadas.getKey());
+                jsonInterno.add("y",coordenadas.getValue());
+                jsonInterno.add("opciones",casillas.size());
+                json.add("puedoMoverme",jsonInterno);
+                this.enviarMensaje(new AgentID(nombreCoordinador), json, null, ACLMessage.QUERY_IF, null, null);
+
+                ACLMessage inbox = this.recibirMensaje(mensajesCoordinador);
+                System.out.println(this.getName()+"c6"+inbox.getContent());
+                // Nos permite hacer el movimiento
+                if (Json.parse(inbox.getContent()).asObject().get("result").asString().equals("si"))
+                    salir = true;
+            }
         }
         
 
@@ -851,11 +885,15 @@ public class Coches extends SuperAgent {
                 casillas.put(getValorEscaner(x, y, 18), "SE");
             }
         } 
-        System.out.println(this.getName()+" asd1:");
+
+        System.out.println(this.getName()+"b4");
         String movimiento = this.trafico(casillas,percepcionJson.get("sensor").asArray().size());
-        System.out.println(this.getName()+" aaaa");  
+        System.out.println(this.getName()+"b5");
         
-        return ("move"+movimiento);        
+        if (movimiento.equals("ninguno"))
+            return ("ninguno");
+        else 
+            return ("move"+movimiento);        
     }
     
      /**
@@ -902,6 +940,8 @@ public class Coches extends SuperAgent {
                 valorCasilla = radar.get(2).asInt();
             } else if (posicion == 11){
                 valorCasilla = radar.get(3).asInt();
+            } else if (posicion == 12) {
+                valorCasilla = radar.get(4).asInt();
             } else if (posicion == 13){
                 valorCasilla = radar.get(5).asInt();
             } else if (posicion == 16){
@@ -922,6 +962,8 @@ public class Coches extends SuperAgent {
                 valorCasilla = radar.get(50).asInt();
             } else if (posicion == 11){
                 valorCasilla = radar.get(59).asInt();
+            } else if (posicion == 12) {
+                valorCasilla = radar.get(60).asInt();
             } else if (posicion == 13){
                 valorCasilla = radar.get(61).asInt();
             } else if (posicion == 16){
@@ -955,6 +997,8 @@ public class Coches extends SuperAgent {
                 posicionTransformada = 2;
             } else if (posicion == 11){
                 posicionTransformada = 3;
+            } else if (posicion == 12) {
+                posicionTransformada = 4;
             } else if (posicion == 13){
                 posicionTransformada = 5;
             } else if (posicion == 16){
@@ -975,6 +1019,8 @@ public class Coches extends SuperAgent {
                 posicionTransformada = 50;
             } else if (posicion == 11){
                 posicionTransformada = 59;
+            } else if (posicion == 12){
+                posicionTransformada = 60;
             } else if (posicion == 13){
                 posicionTransformada = 61;
             } else if (posicion == 16){
