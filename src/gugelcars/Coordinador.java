@@ -117,7 +117,7 @@ public class Coordinador extends SuperAgent {
                 
                 System.out.println("quiero resibir");
                 inbox = this.recibirMensaje(mensajesServidor);
-                System.out.println(inbox.getContent());
+                System.out.println("he resibido");
                 if (inbox.getContent().contains("trace")){
                     this.crearImagen(Json.parse(inbox.getContent()).asObject());
                     inbox = this.recibirMensaje(mensajesServidor);
