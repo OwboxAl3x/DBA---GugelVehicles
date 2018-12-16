@@ -405,6 +405,7 @@ public class Coordinador extends SuperAgent {
         ACLMessage inbox;
         
         while (!salirTrafico){
+            System.out.println(" tamanowhile:"+mensajesPuedoMoverme.size());
             salirTrafico = true;
             // Fijamos un coche y comprobamos con los demás
             for (int i=0; i<mensajesPuedoMoverme.size(); i++){
@@ -431,18 +432,21 @@ public class Coordinador extends SuperAgent {
                                 this.enviarMensaje(mensajesPuedoMoverme.get(i).getSender(), json, null, ACLMessage.INFORM, null, null);
                                 inbox = this.recibirMensaje(mensajesCoches);
                                 mensajesPuedoMoverme.set(i, inbox);
+                                System.out.println(" tamanoif:"+mensajesPuedoMoverme.size());
                             } else {
                                 json = new JsonObject();
                                 json.add("result","no");
                                 System.out.println(json.toString());
                                 this.enviarMensaje(mensajesPuedoMoverme.get(j).getSender(), json, null, ACLMessage.INFORM, null, null);
                                 inbox = this.recibirMensaje(mensajesCoches);
-                                mensajesPuedoMoverme.set(j, inbox);                                        
+                                mensajesPuedoMoverme.set(j, inbox);   
+                                System.out.println(" tamanoelse:"+mensajesPuedoMoverme.size());
                             }
                         }
                     }
                 }
             }
+            System.out.println(" tamanofinalwhile:"+mensajesPuedoMoverme.size());
         }
 
         // Hemos salido del bucle, ya no hay conflictos, damos permiso para moverse a los coches
@@ -450,11 +454,13 @@ public class Coordinador extends SuperAgent {
         json.add("result","si");
         System.out.println(json.toString());
         for (int i=0; i<mensajesPuedoMoverme.size(); i++){
+            System.out.println(mensajesPuedoMoverme.get(i).getSender().toString()+" num mensaje:"+i);
             this.enviarMensaje(mensajesPuedoMoverme.get(i).getSender(), json, null, ACLMessage.INFORM, null, null);                    
         }
 
         // Vaciamos el array
-        mensajesPuedoMoverme = new ArrayList<ACLMessage>();        
+        mensajesPuedoMoverme = new ArrayList<ACLMessage>(); 
+        System.out.println(" eliminado:"+mensajesPuedoMoverme.size());
     }
     
     
