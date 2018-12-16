@@ -120,6 +120,12 @@ public class Coches extends SuperAgent {
         }
     }
     
+    /**
+    *
+    * Inicia sesión en el servidor y se inicializa
+    * 
+    * @author Manuel Ros Rodríguez
+    */
     public void login() throws InterruptedException{
         boolean salirSubscribe = false;
         ACLMessage inbox = null;
@@ -182,9 +188,32 @@ public class Coches extends SuperAgent {
         return (cola.Pop());
     }
     
+    /**
+    *
+    * Envía un mensaje con los parametros que le digamos al receptor que le digamos
+    * Si hay algún argumento que no vamos a utilizar, escribir null
+    * 
+    * @author Manuel Ros Rodríguez
+    */
+    public void enviarMensaje(AgentID receptor, JsonObject contenido, String contenidoString, int performative, String conversationID, String replyWith){
+        ACLMessage outbox = new ACLMessage();
+        outbox.setSender(this.getAid());
+        outbox.setReceiver(receptor);
+        outbox.setPerformative(performative);
+        if (contenido != null)
+            outbox.setContent(contenido.toString());
+        if (contenidoString != null)
+            outbox.setContent(contenidoString);
+        if (conversationID != null)
+            outbox.setConversationId(conversationID);
+        if (replyWith != null)
+            outbox.setInReplyTo(replyWith);
+        this.send(outbox);        
+    }
+    
      /**
      * 
-     * Método principal de los coches, donde se decide que acción va a hacer
+     * Método principal de los coches, donde se decide que acción va a realizar
      * 
      * @author Adrian Martin Jaimez
      * @author Manuel Ros Rodríguez
@@ -194,8 +223,6 @@ public class Coches extends SuperAgent {
         boolean salir = false;
         ACLMessage inbox = null;
         JsonObject json;
-        
-        System.out.println("asd");
         
         while (!salir){
             // Pedimos percepción y la recibimos
@@ -311,7 +338,15 @@ public class Coches extends SuperAgent {
         // El coche ha terminado y espera el cancel del coordinador
         inbox = this.recibirMensaje(mensajesCoordinador);
     }
-    
+
+     /**
+     * Algoritmo de exploración utilizado por los coches no voladores.
+     * En caso de ser volador desde aquí se llama al algoritmo de exploración para coches voladores
+     * 
+     * @author Manuel Ros Rodríguez
+     * @author Alejandro García
+     * 
+     */     
     public String explorar(JsonObject percepcionJson) throws InterruptedException{
         TreeMap<Float,String> casillas = new TreeMap<Float,String>();
         
@@ -350,6 +385,7 @@ public class Coches extends SuperAgent {
     }
 
      /**
+     * Algoritmo de exploración utilizado por el coche volador
      * 
      * @author Fernando Ruiz Hernández
      * 
@@ -404,6 +440,7 @@ public class Coches extends SuperAgent {
     }
     
      /**
+     * Devuelve las coordenadas correspondientes a la posición del radar que le demos
      * 
      * @author Fernando Ruiz Hernández
      * @author Manuel Ros Rodríguez
@@ -427,6 +464,12 @@ public class Coches extends SuperAgent {
         return new Pair(casilla_x, casilla_y);
     }
     
+    /**
+     * Método que se encarga de comunicar el movimiento elegido al servidor y elegir otro si fuese necesario
+     * 
+     * @author Manuel Ros Rodríguez
+     * 
+     */ 
     public String trafico(TreeMap<Float,String> casillas, int tamanoRadar) throws InterruptedException{
         boolean salir = false;
         String puntoCardinal = "";
@@ -459,6 +502,12 @@ public class Coches extends SuperAgent {
         return (puntoCardinal);
     }
     
+     /**
+     * Convierte un String que contiene un punto cardinal a la posición del radar que correspondería
+     * 
+     * @author Manuel Ros Rodríguez
+     * 
+     */ 
     public int dePCardinalACasilla(String puntoCardinal){
         int resultado = -1;
         switch (puntoCardinal){
@@ -749,6 +798,7 @@ public class Coches extends SuperAgent {
     }
     
      /**
+     * Comprueba si la casilla está fuera del cuadrante asignado al agente
      * 
      * @author Manuel Ros Rodríguez
      * 
@@ -823,29 +873,6 @@ public class Coches extends SuperAgent {
         }
         
         return (valorCasilla);
-    }
-    
-    /**
-    *
-    * Envía un mensaje con los parametros que le digamos al receptor que le digamos
-    * Si hay algún argumento que no vamos a utilizar, escribir null
-    * 
-    * @author Manuel Ros Rodríguez
-    */
-    public void enviarMensaje(AgentID receptor, JsonObject contenido, String contenidoString, int performative, String conversationID, String replyWith){
-        ACLMessage outbox = new ACLMessage();
-        outbox.setSender(this.getAid());
-        outbox.setReceiver(receptor);
-        outbox.setPerformative(performative);
-        if (contenido != null)
-            outbox.setContent(contenido.toString());
-        if (contenidoString != null)
-            outbox.setContent(contenidoString);
-        if (conversationID != null)
-            outbox.setConversationId(conversationID);
-        if (replyWith != null)
-            outbox.setInReplyTo(replyWith);
-        this.send(outbox);        
     }
     
     /**
