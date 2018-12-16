@@ -394,7 +394,7 @@ public class Coordinador extends SuperAgent {
             } else if (inbox.getContent().contains("ningunMovimiento")){
                 contadorMovimiento++; 
             }
-                    
+            System.out.println("coordinador:"+contadorMovimiento+" terminados:"+contadorTerminados);
             if (contadorMovimiento + contadorTerminados == 4){
                 this.gestionarTrafico(mensajesPuedoMoverme);
                 contadorMovimiento = 0;
@@ -414,12 +414,17 @@ public class Coordinador extends SuperAgent {
         ACLMessage inbox;
         
         while (!salirTrafico){
+            salirTrafico = true;
             // Fijamos un coche y comprobamos con los demás
             for (int i=0; i<mensajesPuedoMoverme.size(); i++){
+                if (mensajesPuedoMoverme.get(i).getContent().contains("ningunMovimiento"))
+                    continue;
                 int xCoche = Json.parse(mensajesPuedoMoverme.get(i).getContent()).asObject().get("puedoMoverme").asObject().get("x").asInt();
                 int yCoche = Json.parse(mensajesPuedoMoverme.get(i).getContent()).asObject().get("puedoMoverme").asObject().get("y").asInt();
                 for (int j=i+1; j<mensajesPuedoMoverme.size(); j++){
                     if (i != j){
+                        if (mensajesPuedoMoverme.get(j).getContent().contains("ningunMovimiento"))
+                            continue;
                         int xOtroCoche = Json.parse(mensajesPuedoMoverme.get(j).getContent()).asObject().get("puedoMoverme").asObject().get("x").asInt();
                         int yOtroCoche = Json.parse(mensajesPuedoMoverme.get(j).getContent()).asObject().get("puedoMoverme").asObject().get("y").asInt();
 
@@ -436,7 +441,7 @@ public class Coordinador extends SuperAgent {
                                 json = new JsonObject();
                                 json.add("result","no");
                                 this.enviarMensaje(mensajesPuedoMoverme.get(i).getSender(), json, null, ACLMessage.INFORM, null, null);
-                                inbox = this.recibirMensaje(mensajesCoches);
+                                inbox = this.recibirMensaje(mensajesCoches);                               
                                 mensajesPuedoMoverme.set(i, inbox);
                             } else {
                                 json = new JsonObject();
@@ -454,9 +459,10 @@ public class Coordinador extends SuperAgent {
         // Hemos salido del bucle, ya no hay conflictos, damos permiso para moverse a los coches
         json = new JsonObject();
         json.add("result","si");
-        for (int i=0; i<mensajesPuedoMoverme.size(); i++){
-            this.enviarMensaje(mensajesPuedoMoverme.get(i).getSender(), json, null, ACLMessage.INFORM, null, null);                    
-        }
+        for (int i=0; i<mensajesPuedoMoverme.size(); i++)
+            if (!mensajesPuedoMoverme.get(i).getContent().contains("ningunMovimiento"))
+                this.enviarMensaje(mensajesPuedoMoverme.get(i).getSender(), json, null, ACLMessage.INFORM, null, null);                    
+        
     }
     
     

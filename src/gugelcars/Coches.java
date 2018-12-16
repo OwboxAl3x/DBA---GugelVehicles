@@ -241,16 +241,16 @@ public class Coches extends SuperAgent {
             this.enviarMensaje(new AgentID("Cerastes"), null, "", ACLMessage.QUERY_REF, conversationID, replyWith);
             inbox = this.recibirMensaje(mensajesServidor);
             replyWith = inbox.getReplyWith();
-            
+            System.out.println(this.getName()+"a8 "+inbox.getContent().toString());
             JsonObject percepcionJson = Json.parse(inbox.getContent()).asObject().get("result").asObject();
-            
+            System.out.println(this.getName()+"a7 ");
             // Actualizamos nuestra posición
             x = percepcionJson.get("x").asInt();
             y = percepcionJson.get("y").asInt();
-            
+            System.out.println(this.getName()+"a6 ");
             // Actualizamos el mapa de los pasos
             this.actualizarMapaPasos(percepcionJson);
-            
+            System.out.println(this.getName()+"a5 ");
             // Si el coordinador nos manda un mensaje es porque alguien ha encontrado el objetivo
             if (!mensajesCoordinadorObjetivo.isEmpty()){
                 inbox = mensajesCoordinadorObjetivo.Pop();
@@ -261,7 +261,7 @@ public class Coches extends SuperAgent {
                     irCuadrante = false;
                 objetivoEncontrado = true;
             }
-            
+            System.out.println(this.getName()+"a4 ");
             // Comprobamos si hemos llegado al cuadrante
             if (!puedoVolar && cuadrante == 1 && y >= 0 && y < tamanoMapa/2 && x >= 0 && x < tamanoMapa/2){
                 irCuadrante = false;
@@ -274,11 +274,11 @@ public class Coches extends SuperAgent {
             } else if (puedoVolar && x == xObjetivoCuadrante && y == yObjetivoCuadrante){
                 irCuadrante = false;
             }
-            
+            System.out.println(this.getName()+"a3 ");
             // Inicializamos bateria
             if (bateria == 0.0)
                 bateria = Json.parse(inbox.getContent()).asObject().get("result").asObject().get("battery").asInt();
-     
+            System.out.println(this.getName()+"a2 ");
             // Comprobamos bateria
             if (bateria <= consumo){
                 json = new JsonObject();
@@ -290,6 +290,8 @@ public class Coches extends SuperAgent {
                 if (inbox.getPerformativeInt() == ACLMessage.REFUSE)
                     finRefuel = true;
             }
+            
+            System.out.println(this.getName()+"a1 ");
             
             // Comprobamos si estamos en el objetivo, en ese caso se avisa al coordinador
             JsonArray radar = percepcionJson.get("sensor").asArray();
@@ -319,10 +321,10 @@ public class Coches extends SuperAgent {
                 }
             }
             
-            System.out.println("objetivo?:"+(valoRadar(percepcionJson.get("sensor").asArray(),12) == 3));
+            System.out.println("objetivo?:"+percepcionJson.get("goal").asBoolean());
             
             // Comprobamos en que modo estamos y nos movemos
-            if ((finRefuel && bateria <= consumo) || valoRadar(percepcionJson.get("sensor").asArray(),12) == 3){
+            if ((finRefuel && bateria <= consumo) || percepcionJson.get("goal").asBoolean()){
                 json = new JsonObject();
                 json.add("heTerminado","OK");
                 this.enviarMensaje(new AgentID(nombreCoordinador), json, null, ACLMessage.INFORM, null, null);
@@ -377,8 +379,13 @@ public class Coches extends SuperAgent {
     public String explorar(JsonObject percepcionJson) throws InterruptedException{
         TreeMap<Float,String> casillas = new TreeMap<Float,String>();
         
+        String movimiento = "";
+        
         if (puedoVolar){
-            this.explorarVolar(percepcionJson);
+            String movimientoVolar = this.explorarVolar(percepcionJson);
+            if (!movimientoVolar.equals("ninguno")){
+                casillas.put((float) 1, movimientoVolar);
+            }
         } else {
             if (comprobarCasillaPermitida(percepcionJson, 6) && !this.comprobarSiCasillaFueraCuadrante(percepcionJson.get("sensor").asArray(), 6)){
                 casillas.put((float) getValorPasos(x, y, 6), "NW");
@@ -406,7 +413,7 @@ public class Coches extends SuperAgent {
             }         
         }
         
-        String movimiento = this.trafico(casillas, percepcionJson.get("sensor").asArray().size());
+        movimiento = this.trafico(casillas, percepcionJson.get("sensor").asArray().size());
         if (movimiento.equals("ninguno"))
             return ("ninguno");
         else 
@@ -452,7 +459,7 @@ public class Coches extends SuperAgent {
             fin = true;
         }
         if (fin) {
-            // se acabó
+            return ("ninguno");
         }
         if (!barrido_preparado) {
             int x_objetivo;
@@ -465,7 +472,7 @@ public class Coches extends SuperAgent {
             barrido_preparado = true;
         }
         movimiento = irObjetivo(percepcionJson);        
-        return ("move"+movimiento);
+        return (movimiento);
     }
     
      /**
@@ -888,7 +895,7 @@ System.out.println(this.getName()+"c5");
 
         System.out.println(this.getName()+"b4");
         String movimiento = this.trafico(casillas,percepcionJson.get("sensor").asArray().size());
-        System.out.println(this.getName()+"b5");
+        System.out.println(this.getName()+"b5 "+movimiento);
         
         if (movimiento.equals("ninguno"))
             return ("ninguno");
@@ -907,13 +914,13 @@ System.out.println(this.getName()+"c5");
         
         Pair<Integer,Integer> coordenadas = this.coordenadasCasillaRadar(radar.size(), this.transformarPosicion(posicion, radar.size()));
         
-        if (cuadrante == 1 && coordenadas.getKey() > 0 && coordenadas.getKey() < tamanoMapa/2 && coordenadas.getValue() > 0 && coordenadas.getValue() < tamanoMapa/2)
+        if (cuadrante == 1 && coordenadas.getValue() >= 0 && coordenadas.getValue() < tamanoMapa/2 && coordenadas.getKey() >= 0 && coordenadas.getKey() < tamanoMapa/2)
             fuera = false;
-        else if (cuadrante == 2 && coordenadas.getKey() > 0 && coordenadas.getKey() < tamanoMapa/2 && coordenadas.getValue() > tamanoMapa/2 && coordenadas.getValue() < tamanoMapa)
+        else if (cuadrante == 2 && coordenadas.getValue() >= 0 && coordenadas.getValue() < tamanoMapa/2 && coordenadas.getKey() >= tamanoMapa/2 && coordenadas.getKey() < tamanoMapa)
             fuera = false;
-        else if (cuadrante == 3 && coordenadas.getKey() > tamanoMapa/2 && coordenadas.getKey() < tamanoMapa && coordenadas.getValue() > 0 && coordenadas.getValue() < tamanoMapa/2)
+        else if (cuadrante == 3 && coordenadas.getValue() >= tamanoMapa/2 && coordenadas.getValue() < tamanoMapa && coordenadas.getKey() >= 0 && coordenadas.getKey() < tamanoMapa/2)
             fuera = false;
-        else if (cuadrante == 4 && coordenadas.getKey() > tamanoMapa/2 && coordenadas.getKey() < tamanoMapa && coordenadas.getValue() > tamanoMapa/2 && coordenadas.getValue() < tamanoMapa)
+        else if (cuadrante == 4 && coordenadas.getValue() >= tamanoMapa/2 && coordenadas.getValue() < tamanoMapa && coordenadas.getKey() >= tamanoMapa/2 && coordenadas.getKey() < tamanoMapa)
             fuera = false;
         
         return (fuera);
