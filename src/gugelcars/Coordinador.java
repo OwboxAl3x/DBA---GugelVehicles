@@ -101,6 +101,7 @@ public class Coordinador extends SuperAgent {
     * Inicia sesión en el servidor e inicializa a los coches
     *
     * @author Manuel Ros Rodríguez
+    * @author Alejandro García
     */    
     public void login() throws InterruptedException {
         boolean salirSubscribe = false;
@@ -418,6 +419,7 @@ public class Coordinador extends SuperAgent {
     * si han llegado a él o si se han quedado sin combustible
     * 
     * @author Manuel Ros Rodríguez
+    * @author Adrian Martin Jaimez
     */    
     public void comportamiento() throws InterruptedException{
         boolean salir = false;
@@ -476,6 +478,11 @@ public class Coordinador extends SuperAgent {
         // En el método logout, que es el que viene a continuación en el método execute(), se mandarán los CANCEL
     }
     
+    /**
+    *
+    * 
+    * @author Manuel Ros Rodríguez
+    */   
     public void gestionarTrafico(ArrayList<ACLMessage> mensajesPuedoMoverme) throws InterruptedException{
         boolean salirTrafico = false;
         JsonObject json = new JsonObject();
