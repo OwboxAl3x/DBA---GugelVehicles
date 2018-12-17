@@ -43,8 +43,8 @@ public class Coordinador extends SuperAgent {
         this.nombreCoche3 = nombreCoche3;
         this.nombreCoche4 = nombreCoche4;
         this.mapa = mapa;
-        mensajesCoches = new MessageQueue(30); // OJO, solo caben 30 mensajes
-        mensajesServidor = new MessageQueue(30); // OJO, solo caben 30 mensajes
+        mensajesCoches = new MessageQueue(30);
+        mensajesServidor = new MessageQueue(30);
         conversationID = "";
         volador = "";
         tamanoMapa = 0;

@@ -72,9 +72,9 @@ public class Coches extends SuperAgent {
         this.nombreCoche2 = nombreCoche2;
         this.nombreCoche3 = nombreCoche3;
         this.nombreCoche4 = nombreCoche4;
-        mensajesCoordinador = new MessageQueue(30); // OJO, solo caben 30 mensajes
-        mensajesCoches = new MessageQueue(30); // OJO, solo caben 30 mensajes
-        mensajesServidor = new MessageQueue(30); // OJO, solo caben 30 mensajes
+        mensajesCoordinador = new MessageQueue(30);
+        mensajesCoches = new MessageQueue(30);
+        mensajesServidor = new MessageQueue(30);
         mensajesCoordinadorObjetivo = new MessageQueue(30);
         conversationID = "";
         replyWith = "";
@@ -246,11 +246,14 @@ public class Coches extends SuperAgent {
             inbox = this.recibirMensaje(mensajesServidor);
             replyWith = inbox.getReplyWith();
             JsonObject percepcionJson = Json.parse(inbox.getContent()).asObject().get("result").asObject();
+            
             // Actualizamos nuestra posición
             x = percepcionJson.get("x").asInt();
             y = percepcionJson.get("y").asInt();
+            
             // Actualizamos el mapa de los pasos
             this.actualizarMapaPasos(percepcionJson);
+            
             // Si el coordinador nos manda un mensaje es porque alguien ha encontrado el objetivo
             if (!mensajesCoordinadorObjetivo.isEmpty()){
                 inbox = mensajesCoordinadorObjetivo.Pop();
@@ -260,6 +263,7 @@ public class Coches extends SuperAgent {
                     irCuadrante = false;
                 objetivoEncontrado = true;
             }
+            
             // Comprobamos si hemos llegado al cuadrante
             if (!puedoVolar && cuadrante == 1 && y >= 0 && y < tamanoMapa/2 && x >= 0 && x < tamanoMapa/2){
                 irCuadrante = false;
@@ -272,9 +276,11 @@ public class Coches extends SuperAgent {
             } else if (puedoVolar && x == xObjetivoCuadrante && y == yObjetivoCuadrante){
                 irCuadrante = false;
             }
+            
             // Inicializamos bateria
             if (bateria == 0.0)
                 bateria = Json.parse(inbox.getContent()).asObject().get("result").asObject().get("battery").asInt();
+            
             // Comprobamos bateria
             if (bateria <= consumo){
                 json = new JsonObject();
@@ -334,13 +340,13 @@ public class Coches extends SuperAgent {
                 
                 if (irCuadrante){
                     if (!escanerCuadranteCreado)
-                        this.construirEscanerCuadrante(tamanoMapa); // *size de esto?
+                        this.construirEscanerCuadrante(tamanoMapa);
                     movimiento = this.irObjetivo(percepcionJson);
                 } else if (!objetivoEncontrado){
                     movimiento = this.explorar(percepcionJson);
                 } else {
                     if (!escanerObjetivoCreado)
-                        this.construirEscanerObjetivo(tamanoMapa); // *size de esto? 
+                        this.construirEscanerObjetivo(tamanoMapa);
                     movimiento = this.irObjetivo(percepcionJson);
                 }
                 
