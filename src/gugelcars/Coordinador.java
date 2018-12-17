@@ -118,9 +118,7 @@ public class Coordinador extends SuperAgent {
                 json.add("world", mapa);
                 this.enviarMensaje(new AgentID("Cerastes"), json, null, ACLMessage.SUBSCRIBE, null, null);
                 
-                System.out.println("quiero resibir");
                 inbox = this.recibirMensaje(mensajesServidor);
-                System.out.println("he resibido");
                 if (inbox.getContent().contains("trace")){
                     this.crearImagen(Json.parse(inbox.getContent()).asObject());
                     inbox = this.recibirMensaje(mensajesServidor);
@@ -146,22 +144,24 @@ public class Coordinador extends SuperAgent {
             this.enviarMensaje(new AgentID(nombreCoche2), json, null, ACLMessage.REQUEST, null, nombreCoche2);
             this.enviarMensaje(new AgentID(nombreCoche3), json, null, ACLMessage.REQUEST, null, nombreCoche3);
             this.enviarMensaje(new AgentID(nombreCoche4), json, null, ACLMessage.REQUEST, null, nombreCoche4);
-
+            
             inbox = this.recibirMensaje(mensajesCoches);
             inbox2 = this.recibirMensaje(mensajesCoches);
             inbox3 = this.recibirMensaje(mensajesCoches);
             inbox4 = this.recibirMensaje(mensajesCoches);
             
-            // Comprobamos si hay algún volador
+            // Comprobamos si hay un volador
+            int voladores = 0;
             if (Json.parse(inbox.getContent()).asObject().get("capabilities").asObject().get("fly").asBoolean() == true)
-                volador = nombreCoche1;
-            else if (Json.parse(inbox2.getContent()).asObject().get("capabilities").asObject().get("fly").asBoolean() == true)
-                volador = nombreCoche2;
-            else if (Json.parse(inbox3.getContent()).asObject().get("capabilities").asObject().get("fly").asBoolean() == true)
-                volador = nombreCoche3;
-            else if (Json.parse(inbox4.getContent()).asObject().get("capabilities").asObject().get("fly").asBoolean() == true)
-                volador = nombreCoche4;    
-
+                voladores++;
+            if (Json.parse(inbox2.getContent()).asObject().get("capabilities").asObject().get("fly").asBoolean() == true)
+                voladores++;
+            if (Json.parse(inbox3.getContent()).asObject().get("capabilities").asObject().get("fly").asBoolean() == true)
+                voladores++;
+            if (Json.parse(inbox4.getContent()).asObject().get("capabilities").asObject().get("fly").asBoolean() == true)   
+                voladores++;
+            
+            
             // Comprobamos si hay un camión
             int camiones = 0;
             if (Json.parse(inbox.getContent()).asObject().get("capabilities").asObject().get("fuelrate").asInt() == 4)
@@ -183,7 +183,7 @@ public class Coordinador extends SuperAgent {
                 tamanoMapa = Json.parse(inbox3.getContent()).asObject().get("y").asInt();
             else if (Json.parse(inbox4.getContent()).asObject().get("y").asInt() > 30)
                 tamanoMapa = Json.parse(inbox4.getContent()).asObject().get("y").asInt();
-
+            
             // Redondeamos por las paredes limites del mapa
             if (tamanoMapa != 0 && tamanoMapa < 100)
                 tamanoMapa = 100;
@@ -192,7 +192,7 @@ public class Coordinador extends SuperAgent {
             if (tamanoMapa != 0 && tamanoMapa > 150 && tamanoMapa < 500)
                 tamanoMapa = 500;       
             
-            if (!volador.isEmpty() && camiones == 1 && tamanoMapa != 0){
+            if (voladores == 0 && camiones >= 1 && tamanoMapa != 0){
                 // Hemos conseguido lo que queríamos y podemos dejar de hacer subscribe
                 salirSubscribe = true;
             } else {
@@ -212,11 +212,13 @@ public class Coordinador extends SuperAgent {
         // Como tenemos el tamaño del mapa, vamos a realizar el reparto de cuadrantes
         
         // Asignación de cuadrantes
+        
         ArrayList<Pair> posiciones = new ArrayList<Pair>();
         posiciones.add(new Pair(Json.parse(inbox.getContent()).asObject().get("x").asInt(),Json.parse(inbox.getContent()).asObject().get("y").asInt()));
         posiciones.add(new Pair(Json.parse(inbox2.getContent()).asObject().get("x").asInt(),Json.parse(inbox.getContent()).asObject().get("y").asInt()));
         posiciones.add(new Pair(Json.parse(inbox3.getContent()).asObject().get("x").asInt(),Json.parse(inbox.getContent()).asObject().get("y").asInt()));
         posiciones.add(new Pair(Json.parse(inbox4.getContent()).asObject().get("x").asInt(),Json.parse(inbox.getContent()).asObject().get("y").asInt()));
+        
         ArrayList<Integer> asignacion = this.asignarCuadrantes(posiciones); 
         
         // Coche 1
@@ -265,9 +267,10 @@ public class Coordinador extends SuperAgent {
         boolean cuadranteOcupado2 = false;
         boolean cuadranteOcupado3 = false;
         boolean cuadranteOcupado4 = false;
-        int x,y = 0;
+        int x = 0;
+        int y = 0;
         
-        for (int i=0; i<4; i++){
+        /*for (int i=0; i<4; i++){
             x = (int) posiciones.get(i).getKey();
             y = (int) posiciones.get(i).getValue();
             if (y >= 0 && y < tamanoMapa/2 && x >= 0 && x < tamanoMapa/2 && !cuadranteOcupado1){
@@ -340,6 +343,70 @@ public class Coordinador extends SuperAgent {
                     }
                 }
             }
+        }*/
+        
+        for (int i=0; i<4; i++){
+            x = (int) posiciones.get(i).getKey();
+            y = (int) posiciones.get(i).getValue();
+
+            // Probaremos con los cuadrantes más cercanos al que él está
+            if (y >= 0 && y < tamanoMapa/2 && x >= 0 && x < tamanoMapa/2){
+                if (!cuadranteOcupado4){
+                    asignacion.add(4);
+                    cuadranteOcupado4 = true;
+                } else if (!cuadranteOcupado3){
+                    asignacion.add(3);
+                    cuadranteOcupado3 = true;
+                } else if (!cuadranteOcupado2){
+                    asignacion.add(2);
+                    cuadranteOcupado2 = true;
+                } else {
+                    asignacion.add(1);
+                    cuadranteOcupado1 = true;
+                }
+            } else if (y >= 0 && y < tamanoMapa/2 && x >= tamanoMapa/2 && x < tamanoMapa){
+                if (!cuadranteOcupado3){
+                    asignacion.add(3);
+                    cuadranteOcupado3 = true;
+                } else if (!cuadranteOcupado1){
+                    asignacion.add(1);
+                    cuadranteOcupado1 = true;
+                } else if (!cuadranteOcupado4){
+                    asignacion.add(4);
+                    cuadranteOcupado4 = true;
+                } else {
+                    asignacion.add(2);
+                    cuadranteOcupado2 = true;
+                }
+            } else if (y >= tamanoMapa/2 && y < tamanoMapa && x >= 0 && x < tamanoMapa/2){
+                if (!cuadranteOcupado2){
+                    asignacion.add(2);
+                    cuadranteOcupado2 = true;
+                } else if (!cuadranteOcupado4){
+                    asignacion.add(4);
+                    cuadranteOcupado4 = true;
+                } else if (!cuadranteOcupado1){
+                    asignacion.add(1);
+                    cuadranteOcupado1 = true;
+                } else {
+                    asignacion.add(3);
+                    cuadranteOcupado3 = true;
+                }
+            } else if (y >= tamanoMapa/2 && y < tamanoMapa && x >= tamanoMapa/2 && x < tamanoMapa){
+                if (!cuadranteOcupado1){
+                    asignacion.add(1);
+                    cuadranteOcupado1 = true;
+                } else if (!cuadranteOcupado2){
+                    asignacion.add(2);
+                    cuadranteOcupado2 = true;
+                } else if (!cuadranteOcupado3){
+                    asignacion.add(3);
+                    cuadranteOcupado3 = true;
+                } else {
+                    asignacion.add(4);
+                    cuadranteOcupado4 = true;
+                }
+            }
         }
         
         return (asignacion);
@@ -361,20 +428,13 @@ public class Coordinador extends SuperAgent {
         while (!salir){
             ACLMessage inbox = this.recibirMensaje(mensajesCoches);
             JsonObject json = null;
-            
-            System.out.println("Coordinador mensaje recibido: "+inbox.getContent()+" emisor: "+inbox.getSender().toString());
-            
+                        
             if (inbox.getContent().contains("objetivoEncontrado")){
                 // Hemos encontrado el objetivo, avisemos a todos menos al coche que ya lo sabe                
                 if (!objetivoEnviado){
                     json = Json.parse(inbox.getContent()).asObject();
                     
                     // Coche 1
-                    System.out.println(this.getName()+" obj: "+inbox.getSender().toString().contains(nombreCoche1));
-                    System.out.println(this.getName()+" obj: "+inbox.getSender().toString().contains(nombreCoche2));
-                    System.out.println(this.getName()+" obj: "+inbox.getSender().toString().contains(nombreCoche3));
-                    System.out.println(this.getName()+" obj: "+inbox.getSender().toString().contains(nombreCoche4));
-                    
                     if (!inbox.getSender().toString().contains(nombreCoche1))
                         this.enviarMensaje(new AgentID(nombreCoche1), json, null, ACLMessage.INFORM, null, nombreCoche1); 
 
@@ -402,7 +462,7 @@ public class Coordinador extends SuperAgent {
             } else if (inbox.getContent().contains("ningunMovimiento")){
                 contadorMovimiento++; 
             }
-            System.out.println("coordinador:"+contadorMovimiento+" terminados:"+contadorTerminados);
+            
             if (contadorMovimiento + contadorTerminados == 4){
                 this.gestionarTrafico(mensajesPuedoMoverme);
                 contadorMovimiento = 0;

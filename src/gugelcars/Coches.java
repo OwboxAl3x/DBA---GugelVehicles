@@ -142,6 +142,7 @@ public class Coches extends SuperAgent {
         JsonObject json;
         
         while (!salirSubscribe){
+            puedoVolar = false;
             inbox = this.recibirMensaje(mensajesCoordinador);
 
             json = new JsonObject();
@@ -163,6 +164,7 @@ public class Coches extends SuperAgent {
             // Le mandamos al coordinador las capabilities y la información que nos da el GPS
             replyWith = inbox.getReplyWith();
             JsonObject mensajeCoordinador = Json.parse(inbox.getContent()).asObject();
+            
             this.enviarMensaje(new AgentID("Cerastes"), new JsonObject(), null, ACLMessage.QUERY_REF, conversationID, replyWith);
             
             inbox = this.recibirMensaje(mensajesServidor); 
@@ -171,6 +173,7 @@ public class Coches extends SuperAgent {
             // Comprobamos si somos volador
             if (mensajeCoordinador.get("capabilities").asObject().get("fly").asBoolean() == true)
                 puedoVolar = true;
+            
             
             // Obtenemos el consumo
             consumo = mensajeCoordinador.get("capabilities").asObject().get("fuelrate").asInt();
@@ -242,7 +245,6 @@ public class Coches extends SuperAgent {
             this.enviarMensaje(new AgentID("Cerastes"), null, "", ACLMessage.QUERY_REF, conversationID, replyWith);
             inbox = this.recibirMensaje(mensajesServidor);
             replyWith = inbox.getReplyWith();
-            System.out.println(this.getName()+"a8 "+inbox.getContent().toString());
             JsonObject percepcionJson = Json.parse(inbox.getContent()).asObject().get("result").asObject();
             // Actualizamos nuestra posición
             x = percepcionJson.get("x").asInt();
@@ -350,8 +352,6 @@ public class Coches extends SuperAgent {
                     replyWith = inbox.getReplyWith();
 
                     bateria = bateria - consumo;
-                } else {
-                    System.out.println(this.getName()+"ninguno");
                 }
             }          
         }
@@ -372,7 +372,6 @@ public class Coches extends SuperAgent {
         String movimiento = "";
         
         if (puedoVolar){
-            System.out.println("a volar");
             movimiento = this.explorarVolar(percepcionJson);
         } else {
             TreeMap<Float,String> casillas = new TreeMap<Float,String>();
@@ -678,6 +677,27 @@ public class Coches extends SuperAgent {
         // Actualizar casillas
         int casilla_valor = mapaPasos.get(y).get(x);
         mapaPasos.get(y).set(x, casilla_valor+1);
+        
+        int tamano_sensor = 3;
+        
+        if (percepcion.get("sensor").asArray().size() <= 9)
+            tamano_sensor = 3;
+        else if (percepcion.get("sensor").asArray().size() <= 25)
+            tamano_sensor = 5;
+        else if (percepcion.get("sensor").asArray().size() <= 121)
+            tamano_sensor = 11;
+        int casilla_x;
+        int casilla_y;
+        for (int i=0; i<tamano_sensor; i++)
+            for (int j=0; j<tamano_sensor; j++) {
+                casilla_x = x + i - (tamano_sensor/2);
+                casilla_y = y + j - (tamano_sensor/2);
+                if (casilla_x >= 0 && casilla_x <mapaPasos.size() && casilla_y >= 0 && casilla_y <mapaPasos.size()){
+                    casilla_valor = mapaPasos.get(casilla_y).get(casilla_x);
+                    mapaPasos.get(casilla_y).set(casilla_x, casilla_valor+1);
+                }
+                    
+            }
     }
     
     
@@ -767,7 +787,7 @@ public class Coches extends SuperAgent {
      */
     public boolean comprobarCasillaPermitida(JsonObject percepcionJson, int casilla) {
         // Obstáculo
-        if (!puedoVolar && valoRadar(percepcionJson.get("sensor").asArray(), casilla) == 1)
+        if (!puedoVolar && (valoRadar(percepcionJson.get("sensor").asArray(), casilla) == 1))
             return false;
         // Borde del mundo
         if (valoRadar(percepcionJson.get("sensor").asArray(), casilla) == 2)
