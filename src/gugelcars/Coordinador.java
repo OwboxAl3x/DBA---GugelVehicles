@@ -31,7 +31,6 @@ public class Coordinador extends SuperAgent {
     private MessageQueue mensajesCoches;
     private MessageQueue mensajesServidor;
     private String conversationID;
-    private String volador;
     private int tamanoMapa;
     private boolean objetivoEnviado;
     private int contadorCompletado;
@@ -46,7 +45,6 @@ public class Coordinador extends SuperAgent {
         mensajesCoches = new MessageQueue(30);
         mensajesServidor = new MessageQueue(30);
         conversationID = "";
-        volador = "";
         tamanoMapa = 0;
         objetivoEnviado = false;
         contadorCompletado = 0;

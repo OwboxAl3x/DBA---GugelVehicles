@@ -37,7 +37,6 @@ public class Coches extends SuperAgent {
     private int tamanoMapa;
     private int cuadrante;
     private boolean puedoVolar;
-    private int prioridad;
     private int consumo;
     
     private double bateria = 0.0;
@@ -81,7 +80,6 @@ public class Coches extends SuperAgent {
         tamanoMapa = 0;
         cuadrante = 0;
         puedoVolar = false;
-        prioridad = 0;
         consumo = 0;
     }
     
