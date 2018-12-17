@@ -28,7 +28,7 @@ public class GugelCars  {
             String nombreCoche3 = "car"+numeroInicial+3;
             String nombreCoche4 = "car"+numeroInicial+4;
             String nombreCoordinador = "coordinador"+numeroInicial;
-            String mapa = "map9";
+            String mapa = "map1";
             
             coches = new Coches[4];
             coches[0] = new Coches(new AgentID(nombreCoche1),nombreCoordinador, nombreCoche1, nombreCoche2, nombreCoche3, nombreCoche4);

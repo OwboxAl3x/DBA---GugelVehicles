@@ -193,7 +193,7 @@ public class Coordinador extends SuperAgent {
             if (tamanoMapa != 0 && tamanoMapa > 150 && tamanoMapa < 500)
                 tamanoMapa = 500;       
             
-            if (voladores == 0 && camiones >= 1 && tamanoMapa != 0){
+            if (voladores >= 1 && camiones >= 1 && tamanoMapa != 0){
                 // Hemos conseguido lo que queríamos y podemos dejar de hacer subscribe
                 salirSubscribe = true;
             } else {
