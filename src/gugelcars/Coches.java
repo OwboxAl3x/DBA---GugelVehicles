@@ -135,6 +135,7 @@ public class Coches extends SuperAgent {
     * Inicia sesión en el servidor y se inicializa
     * 
     * @author Manuel Ros Rodríguez
+    * @author Alejandro García
     */
     public void login() throws InterruptedException{
         boolean salirSubscribe = false;
